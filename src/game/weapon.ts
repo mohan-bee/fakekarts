@@ -2,15 +2,27 @@ import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { PISTOL_DAMAGE } from './combat.js'
 import type { Effects } from './effects'
-import { breakObstacle, obstacleAt, type Obstacle } from './obstacles.js'
+import { breakObstacle, type Obstacle } from './obstacles.js'
 import type { KartState } from './physics'
 
-type Bullet = { mesh: THREE.Mesh; trail: THREE.Mesh[]; velocity: THREE.Vector3; life: number }
+type Bullet = { model: THREE.Group; trail: THREE.Mesh[]; velocity: THREE.Vector3; life: number }
 export type WeaponTarget = { id: string; object: THREE.Object3D }
 
 export const stepBullet = (position: THREE.Vector3, velocity: THREE.Vector3, dt: number) => {
   position.addScaledVector(velocity, dt)
   velocity.y -= 9.8 * dt
+}
+
+export const distanceToSegmentSquared = (px: number, py: number, pz: number, start: THREE.Vector3, end: THREE.Vector3) => {
+  const dx = end.x - start.x
+  const dy = end.y - start.y
+  const dz = end.z - start.z
+  const lengthSquared = dx * dx + dy * dy + dz * dz
+  const amount = lengthSquared ? THREE.MathUtils.clamp(((px - start.x) * dx + (py - start.y) * dy + (pz - start.z) * dz) / lengthSquared, 0, 1) : 0
+  const x = start.x + dx * amount - px
+  const y = start.y + dy * amount - py
+  const z = start.z + dz * amount - pz
+  return x * x + y * y + z * z
 }
 
 export class WeaponSystem {
@@ -19,9 +31,9 @@ export class WeaponSystem {
   private muzzle = new THREE.Object3D()
   private flash = new THREE.Mesh(new THREE.SphereGeometry(.28, 8, 6), new THREE.MeshBasicMaterial({ color: '#fff09a' }))
   private bullets: Bullet[] = []
-  private bulletGeometry = new THREE.SphereGeometry(.2, 8, 6)
-  private bulletMaterial = new THREE.MeshBasicMaterial({ color: '#fff4a3' })
-  private trailMaterials = [.4, .3, .2, .12, .06].map(opacity => new THREE.MeshBasicMaterial({ color: '#ffd447', transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending }))
+  private bulletGeometry = new THREE.SphereGeometry(.28, 8, 6)
+  private trailMaterials = [.5, .38, .28, .2, .13, .08, .04].map(opacity => new THREE.MeshBasicMaterial({ color: '#ffb52e', transparent: true, opacity, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending }))
+  private bulletTemplate = this.createBulletModel()
   private cooldown = 0
   private recoil = 0
 
@@ -33,7 +45,7 @@ export class WeaponSystem {
   get bulletCount() { return this.bullets.length }
 
   clear() {
-    for (const bullet of this.bullets) this.scene.remove(bullet.mesh, ...bullet.trail)
+    for (const bullet of this.bullets) this.scene.remove(bullet.model, ...bullet.trail)
     this.bullets = []
   }
 
@@ -49,33 +61,31 @@ export class WeaponSystem {
     for (const bullet of this.bullets) {
       bullet.life -= dt
       for (let i = bullet.trail.length - 1; i > 0; i--) bullet.trail[i].position.copy(bullet.trail[i - 1].position)
-      bullet.trail[0].position.copy(bullet.mesh.position)
-      stepBullet(bullet.mesh.position, bullet.velocity, dt)
+      bullet.trail[0].position.copy(bullet.model.position)
+      const previous = bullet.model.position.clone()
+      stepBullet(bullet.model.position, bullet.velocity, dt)
       const target = targets.find(({ object }) => {
-        const dx = bullet.mesh.position.x - object.position.x
-        const dy = bullet.mesh.position.y - object.position.y - 1.2
-        const dz = bullet.mesh.position.z - object.position.z
-        return dx * dx + dy * dy + dz * dz < 4.8
+        return distanceToSegmentSquared(object.position.x, object.position.y + 1.2, object.position.z, previous, bullet.model.position) < 4.8
       })
       if (target) {
-        this.effects.bulletImpact(bullet.mesh.position)
-        this.effects.combatBurst(bullet.mesh.position, false)
+        this.effects.bulletImpact(bullet.model.position)
+        this.effects.combatBurst(bullet.model.position, false)
         onHit(target.id, PISTOL_DAMAGE)
         bullet.life = 0
         continue
       }
-      const hit = obstacleAt(bullet.mesh.position.x, bullet.mesh.position.y, bullet.mesh.position.z, obstacles)
+      const hit = obstacles.find(obstacle => !obstacle.broken && Math.min(previous.y, bullet.model.position.y) <= obstacle.height && distanceToSegmentSquared(obstacle.x, Math.min(obstacle.height, bullet.model.position.y), obstacle.z, previous, bullet.model.position) <= obstacle.radius * obstacle.radius)
       if (hit) {
         if (hit.breakable) { breakObstacle(hit); this.effects.crateBurst(hit.x, hit.z) }
-        this.effects.bulletImpact(bullet.mesh.position)
+        this.effects.bulletImpact(bullet.model.position)
         bullet.life = 0
-      } else if (bullet.mesh.position.y <= .1) {
-        this.effects.bulletImpact(bullet.mesh.position)
+      } else if (bullet.model.position.y <= .1) {
+        this.effects.bulletImpact(bullet.model.position)
         bullet.life = 0
       }
     }
     for (let i = this.bullets.length - 1; i >= 0; i--) if (this.bullets[i].life <= 0) {
-      this.scene.remove(this.bullets[i].mesh)
+      this.scene.remove(this.bullets[i].model)
       for (const ghost of this.bullets[i].trail) this.scene.remove(ghost)
       this.bullets.splice(i, 1)
     }
@@ -86,7 +96,7 @@ export class WeaponSystem {
     this.holder.updateWorldMatrix(true, true)
     const position = this.muzzle.getWorldPosition(new THREE.Vector3())
     const direction = new THREE.Vector3(0, 0, 1).applyQuaternion(this.muzzle.getWorldQuaternion(new THREE.Quaternion())).normalize()
-    const bullet = new THREE.Mesh(this.bulletGeometry, this.bulletMaterial)
+    const bullet = this.bulletTemplate.clone()
     const trail = this.trailMaterials.map((material, index) => {
       const ghost = new THREE.Mesh(this.bulletGeometry, material)
       ghost.position.copy(position)
@@ -94,16 +104,33 @@ export class WeaponSystem {
       this.scene.add(ghost)
       return ghost
     })
-    bullet.add(new THREE.PointLight('#ffd447', 3, 7, 2))
     bullet.position.copy(position)
-    bullet.scale.setScalar(1.35)
     bullet.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction)
     this.scene.add(bullet)
-    this.bullets.push({ mesh: bullet, trail, velocity: direction.multiplyScalar(42 + Math.max(0, state.speed) * .5).add(new THREE.Vector3(0, 1.2, 0)), life: 2.2 })
-    this.effects.muzzleSmoke(position, direction.normalize())
+    const velocity = direction.clone().multiplyScalar(34 + Math.max(0, state.speed) * .35).add(new THREE.Vector3(0, 1.2, 0))
+    this.bullets.push({ model: bullet, trail, velocity, life: 2.6 })
+    this.effects.muzzleSmoke(position, direction)
     this.cooldown = .24
     this.recoil = 1
     return true
+  }
+
+  private createBulletModel() {
+    const bullet = new THREE.Group()
+    const gold = new THREE.MeshBasicMaterial({ color: '#ffd447', depthTest: false })
+    const hot = new THREE.MeshBasicMaterial({ color: '#fffbe0', depthTest: false })
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(.25, .25, .9, 10), gold)
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(.26, .55, 10), hot)
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(.3, .8, 10), new THREE.MeshBasicMaterial({ color: '#ff6a2a', transparent: true, opacity: .75, depthTest: false, blending: THREE.AdditiveBlending }))
+    body.rotation.x = tip.rotation.x = Math.PI / 2
+    tail.rotation.x = -Math.PI / 2
+    tip.position.z = .7
+    tail.position.z = -.8
+    bullet.add(body, tip, tail, new THREE.PointLight('#ffb52e', 4, 9, 2))
+    bullet.scale.setScalar(1.3)
+    bullet.renderOrder = 10
+    bullet.userData.projectile = true
+    return bullet
   }
 
   private buildModel() {
