@@ -21,7 +21,8 @@
 .weapon-hud { position: absolute; left: 30px; bottom: 28px; display: grid; grid-template-columns: auto auto; padding: 10px 13px; background: rgba(9,29,45,.72); border: 1px solid rgba(255,255,255,.18); border-radius: 8px; }
 .weapon-hud small { grid-column: 1 / -1; color: #8bd7ff; font-size: 8px; letter-spacing: 2px; }
 .weapon-hud b { font: 14px 'Archivo Black'; }.weapon-hud span { margin-left: 14px; color: #ffd447; font-size: 17px; }
-.crosshair { position: absolute; left: 50%; top: 47%; width: 30px; height: 30px; color: rgba(255,255,255,.8); border: 2px solid rgba(255,255,255,.55); border-radius: 50%; font: 20px/25px monospace; text-align: center; transform: translate(-50%,-50%); text-shadow: 0 1px 3px #17253b; }
+.crosshair { position: absolute; left: 50%; top: 47%; width: 30px; height: 30px; color: rgba(255,255,255,.8); border: 2px solid rgba(255,255,255,.55); border-radius: 50%; font: 20px/25px monospace; text-align: center; transform: translate(-50%,-50%); text-shadow: 0 1px 3px #17253b; transition: .1s; }
+.crosshair.hit { color: #ff5a4f; border-color: #ffd447; background: rgba(255,212,71,.28); transform: translate(-50%,-50%) scale(1.35); }
 .players { position: absolute; top: 95px; right: 28px; display: grid; gap: 7px; font-size: 9px; text-align: right; }
 .players span { background: rgba(9,29,45,.55); padding: 6px 9px; border-radius: 4px; }
 .players i { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; }

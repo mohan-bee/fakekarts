@@ -5,7 +5,7 @@ import type { Effects } from './effects'
 import { breakObstacle, obstacleAt, type Obstacle } from './obstacles.js'
 import type { KartState } from './physics'
 
-type Bullet = { mesh: THREE.Mesh; velocity: THREE.Vector3; life: number }
+type Bullet = { mesh: THREE.Mesh; trail: THREE.Mesh[]; velocity: THREE.Vector3; life: number }
 export type WeaponTarget = { id: string; object: THREE.Object3D }
 
 export const stepBullet = (position: THREE.Vector3, velocity: THREE.Vector3, dt: number) => {
@@ -19,8 +19,9 @@ export class WeaponSystem {
   private muzzle = new THREE.Object3D()
   private flash = new THREE.Mesh(new THREE.SphereGeometry(.28, 8, 6), new THREE.MeshBasicMaterial({ color: '#fff09a' }))
   private bullets: Bullet[] = []
-  private bulletGeometry = new THREE.SphereGeometry(.13, 8, 6)
-  private bulletMaterial = new THREE.MeshBasicMaterial({ color: '#ffe052' })
+  private bulletGeometry = new THREE.SphereGeometry(.2, 8, 6)
+  private bulletMaterial = new THREE.MeshBasicMaterial({ color: '#fff4a3' })
+  private trailMaterials = [.4, .3, .2, .12, .06].map(opacity => new THREE.MeshBasicMaterial({ color: '#ffd447', transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending }))
   private cooldown = 0
   private recoil = 0
 
@@ -31,17 +32,24 @@ export class WeaponSystem {
 
   get bulletCount() { return this.bullets.length }
 
-  update(state: KartState, obstacles: Obstacle[], targets: WeaponTarget[], firing: boolean, dt: number, onHit: (id: string, damage: number) => void) {
+  clear() {
+    for (const bullet of this.bullets) this.scene.remove(bullet.mesh, ...bullet.trail)
+    this.bullets = []
+  }
+
+  update(state: KartState, obstacles: Obstacle[], targets: WeaponTarget[], firing: boolean, dt: number, onHit: (id: string, damage: number) => void, onFire: () => void = () => {}) {
     this.cooldown = Math.max(0, this.cooldown - dt)
     this.recoil = Math.max(0, this.recoil - dt * 7)
     this.slide.position.z = .35 - this.recoil * .28
     this.flash.visible = this.recoil > .62
     this.flash.scale.setScalar(.7 + this.recoil * .7)
     this.holder.rotation.y = Math.sin(performance.now() * .004) * .012
-    if (firing && this.cooldown === 0) this.fire(state)
+    if (firing && this.shoot(state)) onFire()
 
     for (const bullet of this.bullets) {
       bullet.life -= dt
+      for (let i = bullet.trail.length - 1; i > 0; i--) bullet.trail[i].position.copy(bullet.trail[i - 1].position)
+      bullet.trail[0].position.copy(bullet.mesh.position)
       stepBullet(bullet.mesh.position, bullet.velocity, dt)
       const target = targets.find(({ object }) => {
         const dx = bullet.mesh.position.x - object.position.x
@@ -50,6 +58,7 @@ export class WeaponSystem {
         return dx * dx + dy * dy + dz * dz < 4.8
       })
       if (target) {
+        this.effects.bulletImpact(bullet.mesh.position)
         this.effects.combatBurst(bullet.mesh.position, false)
         onHit(target.id, PISTOL_DAMAGE)
         bullet.life = 0
@@ -67,23 +76,34 @@ export class WeaponSystem {
     }
     for (let i = this.bullets.length - 1; i >= 0; i--) if (this.bullets[i].life <= 0) {
       this.scene.remove(this.bullets[i].mesh)
+      for (const ghost of this.bullets[i].trail) this.scene.remove(ghost)
       this.bullets.splice(i, 1)
     }
   }
 
-  private fire(state: KartState) {
+  shoot(state: KartState) {
+    if (this.cooldown > 0) return false
     this.holder.updateWorldMatrix(true, true)
     const position = this.muzzle.getWorldPosition(new THREE.Vector3())
     const direction = new THREE.Vector3(0, 0, 1).applyQuaternion(this.muzzle.getWorldQuaternion(new THREE.Quaternion())).normalize()
     const bullet = new THREE.Mesh(this.bulletGeometry, this.bulletMaterial)
+    const trail = this.trailMaterials.map((material, index) => {
+      const ghost = new THREE.Mesh(this.bulletGeometry, material)
+      ghost.position.copy(position)
+      ghost.scale.setScalar(1 - index * .12)
+      this.scene.add(ghost)
+      return ghost
+    })
+    bullet.add(new THREE.PointLight('#ffd447', 3, 7, 2))
     bullet.position.copy(position)
-    bullet.scale.set(.8, .8, 2.8)
+    bullet.scale.setScalar(1.35)
     bullet.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction)
     this.scene.add(bullet)
-    this.bullets.push({ mesh: bullet, velocity: direction.multiplyScalar(62 + Math.max(0, state.speed)).add(new THREE.Vector3(0, 1.2, 0)), life: 2.2 })
+    this.bullets.push({ mesh: bullet, trail, velocity: direction.multiplyScalar(42 + Math.max(0, state.speed) * .5).add(new THREE.Vector3(0, 1.2, 0)), life: 2.2 })
     this.effects.muzzleSmoke(position, direction.normalize())
     this.cooldown = .24
     this.recoil = 1
+    return true
   }
 
   private buildModel() {

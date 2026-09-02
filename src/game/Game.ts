@@ -23,6 +23,7 @@ export class Game {
   private weapon = new WeaponSystem(this.scene, this.kart, this.effects)
   private rival = createKart('#30a9ff')
   private remotes = new Map<string, THREE.Group>()
+  private remoteWeapons = new Map<string, WeaponSystem>()
   private multiplayer: Multiplayer
   private obstacles: Obstacle[]
   private state: KartState = { x: 0, y: 0, z: 12, heading: 0, speed: 0, verticalSpeed: 0, health: MAX_HEALTH }
@@ -34,7 +35,6 @@ export class Game {
   private distanceTravelled = 0
   private groundHeight = 0
   private botHealth = MAX_HEALTH
-  private collisionCooldowns = new Map<string, number>()
 
   constructor(canvas: HTMLCanvasElement, name: () => string, private settings: GameSettings) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
@@ -44,9 +44,14 @@ export class Game {
     createArena(this.scene)
     this.obstacles = createObstacles(this.scene)
     this.scene.add(this.kart, this.rival)
+    new WeaponSystem(this.scene, this.rival, this.effects)
     this.chaseCamera.snap(this.state)
     this.multiplayer = new Multiplayer(name)
     this.multiplayer.onDamage(damage => this.damagePlayer(damage))
+    this.multiplayer.onFire(id => {
+      const peer = this.multiplayer.peers.get(id)
+      if (peer) this.remoteWeapons.get(id)?.shoot(peer)
+    })
     bindControls(this.controls)
     addEventListener('resize', () => this.resize())
     this.resize()
@@ -83,10 +88,6 @@ export class Game {
   }
 
   private update(dt: number) {
-    for (const [id, cooldown] of this.collisionCooldowns) {
-      if (cooldown <= dt) this.collisionCooldowns.delete(id)
-      else this.collisionCooldowns.set(id, cooldown - dt)
-    }
     const previousX = this.state.x
     const previousZ = this.state.z
     this.state = stepKart(this.state, this.controls, dt, this.settings)
@@ -100,6 +101,7 @@ export class Game {
     this.rival.position.set(Math.sin(this.aiAngle) * 28, .12, Math.cos(this.aiAngle) * 28)
     this.rival.rotation.y = this.aiAngle + Math.PI / 2
     this.collideWithOpponents()
+    this.syncPeers(dt)
 
     this.kart.position.set(this.state.x, .12 + (this.state.y ?? 0), this.state.z)
     this.kart.rotation.y = this.state.heading
@@ -111,36 +113,30 @@ export class Game {
     this.effects.exhaust(this.state, dt)
     this.effects.drift(this.state, dt)
     const targets: WeaponTarget[] = [{ id: 'bot', object: this.rival }, ...[...this.remotes].map(([id, object]) => ({ id, object }))]
-    this.weapon.update(this.state, this.obstacles, targets, this.controls.fire, dt, (id, damage) => this.damageOpponent(id, damage))
+    this.weapon.update(this.state, this.obstacles, targets, this.controls.fire, dt, (id, damage) => this.damageOpponent(id, damage), () => this.multiplayer.fire())
+    for (const [id, weapon] of this.remoteWeapons) {
+      const peer = this.multiplayer.peers.get(id)
+      if (peer) weapon.update(peer, [], [], false, dt, () => {})
+    }
     this.effects.update(dt)
 
     this.lastSend += dt
     if (this.lastSend > .08) { this.multiplayer.send(this.state, Math.round(this.distanceTravelled)); this.lastSend = 0 }
-    this.syncPeers(dt)
     updateHud(this.state.speed, this.state.drift ?? 0, this.state.health ?? MAX_HEALTH, this.botHealth, this.multiplayer.peers.values(), this.multiplayer.id, this.distanceTravelled)
   }
 
   private collideWithOpponents() {
-    const botDamage = this.collisionCooldowns.has('bot') ? 0 : resolveKartCollision(this.state, {
-      x: this.rival.position.x, y: 0, z: this.rival.position.z, heading: this.rival.rotation.y, speed: 12.6,
+    resolveKartCollision(this.state, {
+      x: this.rival.position.x, y: 0, z: this.rival.position.z,
     })
-    if (botDamage) {
-      this.collisionCooldowns.set('bot', .7)
-      this.damagePlayer(botDamage)
-      this.damageBot(botDamage)
-    }
-    for (const [id, peer] of this.multiplayer.peers) {
-      const damage = this.collisionCooldowns.has(id) ? 0 : resolveKartCollision(this.state, peer)
-      if (!damage) continue
-      this.collisionCooldowns.set(id, .7)
-      if (this.multiplayer.id < id) {
-        this.damagePlayer(damage)
-        this.multiplayer.hitOpponent(id, damage)
-      }
-    }
+    for (const peer of this.multiplayer.peers.values()) resolveKartCollision(this.state, peer)
   }
 
   private damageOpponent(id: string, damage: number) {
+    const crosshair = document.querySelector('#hud .crosshair')!
+    crosshair.classList.remove('hit')
+    requestAnimationFrame(() => crosshair.classList.add('hit'))
+    window.setTimeout(() => crosshair.classList.remove('hit'), 160)
     if (id === 'bot') this.damageBot(damage)
     else this.multiplayer.hitOpponent(id, damage)
   }
@@ -180,6 +176,7 @@ export class Game {
         kart.rotation.y = peer.heading
         this.remotes.set(id, kart)
         this.scene.add(kart)
+        this.remoteWeapons.set(id, new WeaponSystem(this.scene, kart, this.effects))
       } else {
         kart.position.x += (peer.x - kart.position.x) * smoothing
         kart.position.z += (peer.z - kart.position.z) * smoothing
@@ -188,7 +185,12 @@ export class Game {
         kart.rotation.y += turn * smoothing
       }
     }
-    for (const [id, kart] of this.remotes) if (!this.multiplayer.peers.has(id)) { this.scene.remove(kart); this.remotes.delete(id) }
+    for (const [id, kart] of this.remotes) if (!this.multiplayer.peers.has(id)) {
+      this.scene.remove(kart)
+      this.remotes.delete(id)
+      this.remoteWeapons.get(id)?.clear()
+      this.remoteWeapons.delete(id)
+    }
   }
 
 }
