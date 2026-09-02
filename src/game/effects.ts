@@ -90,10 +90,10 @@ export class Effects {
     }
   }
 
-  private spawn(position: THREE.Vector3, velocity: THREE.Vector3, smoke: boolean, color = '#c8793d') {
+  private spawn(position: THREE.Vector3, velocity: THREE.Vector3, smoke: boolean, color?: THREE.ColorRepresentation) {
     const material = smoke
-      ? new THREE.MeshBasicMaterial({ color: '#d9dde2', transparent: true, opacity: .55, depthWrite: false })
-      : new THREE.MeshToonMaterial({ color })
+      ? new THREE.MeshBasicMaterial({ color: color ?? '#d9dde2', transparent: true, opacity: .55, depthWrite: false })
+      : new THREE.MeshToonMaterial({ color: color ?? '#c8793d' })
     const particle = new THREE.Mesh(smoke ? this.smokeGeometry : this.debrisGeometry, material)
     particle.position.copy(position)
     particle.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3)

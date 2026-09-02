@@ -9,6 +9,7 @@ type RoomMessage =
   | { type: 'left'; id: string }
   | { type: 'start'; startAt: number }
   | { type: 'hit'; id: string; targetId: string; attackerId: string; damage: number }
+  | { type: 'fire'; shooterId: string }
 
 export class Multiplayer {
   readonly peers = new Map<string, Peer>()
@@ -22,6 +23,7 @@ export class Multiplayer {
   private heartbeat?: number
   private localPlayer: Omit<Peer, 'seen'>
   private damageHandler: (damage: number, attackerId: string) => void = () => {}
+  private fireHandler: (shooterId: string) => void = () => {}
   private seenHits = new Set<string>()
 
   constructor(private name: () => string) {
@@ -50,6 +52,13 @@ export class Multiplayer {
   }
 
   onDamage(handler: (damage: number, attackerId: string) => void) { this.damageHandler = handler }
+
+  onFire(handler: (shooterId: string) => void) { this.fireHandler = handler }
+
+  fire() {
+    if (!this.client?.connected) return
+    this.client.publish(this.topic, JSON.stringify({ type: 'fire', shooterId: this.id } satisfies RoomMessage), { qos: 0 })
+  }
 
   hitOpponent(targetId: string, damage: number) {
     if (!this.client?.connected) return
@@ -130,6 +139,8 @@ export class Multiplayer {
       this.seenHits.add(message.id)
       if (this.seenHits.size > 100) this.seenHits.delete(this.seenHits.values().next().value!)
       this.damageHandler(Math.max(0, Math.min(100, Number(message.damage) || 0)), message.attackerId)
+    } else if (message.type === 'fire' && message.shooterId !== this.id) {
+      this.fireHandler(message.shooterId)
     }
   }
 

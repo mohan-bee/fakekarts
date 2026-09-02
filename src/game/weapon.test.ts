@@ -19,6 +19,9 @@ test('mounted pistol fires a live projectile', () => {
   const weapon = new WeaponSystem(scene, kart, new Effects(scene))
   weapon.update({ x: 0, y: 0, z: 0, heading: 0, speed: 10 }, [], [], true, 1 / 60, () => {})
   assert.equal(weapon.bulletCount, 1)
+  const bullet = scene.children.find(object => object.children.some(child => child instanceof THREE.PointLight))!
+  assert.ok(bullet instanceof THREE.Mesh)
+  assert.equal(scene.children.filter(object => object instanceof THREE.Mesh && object.material instanceof THREE.MeshBasicMaterial && object.material.blending === THREE.AdditiveBlending).length, 5)
 })
 
 test('mounted pistol damages an opponent in its firing path', () => {
