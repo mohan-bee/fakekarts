@@ -3,13 +3,14 @@ export type Controls = { forward: boolean; back: boolean; left: boolean; right: 
 export type Handling = { steeringSensitivity: number; driftStrength: number }
 export const KPH_PER_UNIT = 5.1
 export const MAX_SPEED = 150 / KPH_PER_UNIT
+export const MAX_REVERSE_SPEED = 70 / KPH_PER_UNIT
 
 export const stepKart = (state: KartState, input: Controls, dt: number, handling: Handling = { steeringSensitivity: 1, driftStrength: 1.15 }): KartState => {
   let speed = state.speed
   if (input.forward) speed += (speed < 0 ? 38 : 24) * dt
   else if (input.back) speed -= (speed > 0 ? 42 : 18) * dt
   else speed -= Math.sign(speed) * Math.min(Math.abs(speed), 3.2 * dt)
-  speed = Math.max(-10, Math.min(MAX_SPEED, speed))
+  speed = Math.max(-MAX_REVERSE_SPEED, Math.min(MAX_SPEED, speed))
 
   const steering = Number(input.left) - Number(input.right)
   const drifting = input.drift && speed > 4 && steering !== 0

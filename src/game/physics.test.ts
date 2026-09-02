@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { KPH_PER_UNIT, MAX_SPEED, stepGravity, stepKart, type KartState } from './physics.js'
+import { KPH_PER_UNIT, MAX_REVERSE_SPEED, MAX_SPEED, stepGravity, stepKart, type KartState } from './physics.js'
 
 test('kart accelerates, turns, and respects top speed', () => {
   let kart = { x: 0, z: 0, heading: 0, speed: 0 }
@@ -25,6 +25,14 @@ test('drift creates slip and reverse brakes before backing up', () => {
   controls.left = controls.drift = false
   for (let i = 0; i < 90; i++) kart = stepKart(kart, controls, 1 / 60)
   assert.ok(kart.speed < -5)
+})
+
+test('kart reverse speed is capped at 70 km/h', () => {
+  let kart: KartState = { x: 0, z: 0, heading: 0, speed: 0 }
+  const controls = { forward: false, back: true, left: false, right: false, drift: false, fire: false }
+  for (let i = 0; i < 180; i++) kart = stepKart(kart, controls, 1 / 60)
+  assert.equal(kart.speed, -MAX_REVERSE_SPEED)
+  assert.equal(Math.round(Math.abs(kart.speed) * KPH_PER_UNIT), 70)
 })
 
 test('kart launches from a ramp and gravity lands it', () => {
