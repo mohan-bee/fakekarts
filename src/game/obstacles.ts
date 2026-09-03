@@ -49,6 +49,43 @@ function addCrate(scene: THREE.Scene, x: number, z: number): Obstacle {
   return { object: crate, x, z, radius: 2.7, height: 3.6, breakable: true, broken: false }
 }
 
+function addTireStack(scene: THREE.Scene, x: number, z: number): Obstacle {
+  const stack = new THREE.Group()
+  const rubber = toon('#252b38')
+  const rim = toon('#8fd8eb')
+  for (let y = 0; y < 4; y++) {
+    const tire = new THREE.Mesh(new THREE.TorusGeometry(1.65, .48, 8, 18), rubber)
+    tire.position.y = .48 + y * .72
+    tire.rotation.x = Math.PI / 2
+    tire.castShadow = tire.receiveShadow = true
+    stack.add(tire)
+  }
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(.55, .55, 3, 12), rim)
+  cap.position.y = 1.55
+  stack.add(cap)
+  stack.position.set(x, 0, z)
+  scene.add(stack)
+  return { object: stack, x, z, radius: 2.3, height: 3.4, breakable: false, broken: false }
+}
+
+function addBarrier(scene: THREE.Scene, x: number, z: number, rotation = 0): Obstacle {
+  const barrier = new THREE.Group()
+  const concrete = new THREE.Mesh(new RoundedBoxGeometry(7, 2.5, 1.7, 3, .2), toon('#d8dbe3'))
+  concrete.position.y = 1.25
+  concrete.castShadow = concrete.receiveShadow = true
+  barrier.add(concrete)
+  for (const offset of [-2.15, 0, 2.15]) {
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(1.15, .34, 1.78), toon('#ff6259'))
+    stripe.position.set(offset, 1.35, 0)
+    stripe.rotation.z = -.48
+    barrier.add(stripe)
+  }
+  barrier.position.set(x, 0, z)
+  barrier.rotation.y = rotation
+  scene.add(barrier)
+  return { object: barrier, x, z, radius: 4.1, height: 2.5, breakable: false, broken: false }
+}
+
 function addSkatePark(scene: THREE.Scene) {
   const concrete = toon('#65c8d5')
   const metal = toon('#e7f4f5')
@@ -93,6 +130,18 @@ export function createObstacles(scene: THREE.Scene) {
     addCrate(scene, 5, 36),
     addCrate(scene, -38, 20),
     addCrate(scene, -33, 25),
+    addCube(scene, 67, 43, '#44cfa1'),
+    addCube(scene, -72, -35, '#ff8d3b'),
+    addCrate(scene, 73, -22),
+    addCrate(scene, 67, -27),
+    addCrate(scene, -66, 54),
+    addCrate(scene, -72, 49),
+    addTireStack(scene, 2, -70),
+    addTireStack(scene, 72, 13),
+    addTireStack(scene, -56, -64),
+    addBarrier(scene, 42, 68, .35),
+    addBarrier(scene, -44, -73, -.4),
+    addBarrier(scene, 82, 48, 1.15),
   ]
   addSkatePark(scene)
   return obstacles

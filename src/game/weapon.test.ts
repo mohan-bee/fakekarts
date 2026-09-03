@@ -42,7 +42,7 @@ test('projectiles remain alive until they leave the arena', () => {
   weapon.update(state, [], [], true, 1 / 60, () => {})
   weapon.update(state, [], [], false, 1, () => {})
   assert.equal(weapon.bulletCount, 1)
-  weapon.update(state, [], [], false, 2, () => {})
+  weapon.update(state, [], [], false, 4, () => {})
   assert.equal(weapon.bulletCount, 0)
 })
 

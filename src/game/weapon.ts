@@ -26,6 +26,10 @@ export const distanceToSegmentSquared = (px: number, py: number, pz: number, sta
 }
 
 export class WeaponSystem {
+  private steelMaterial = new THREE.MeshToonMaterial({ color: '#6f7f94' })
+  private accentMaterial = new THREE.MeshToonMaterial({ color: '#ff5a4f' })
+  private bulletMaterial = new THREE.MeshToonMaterial({ color: '#c88a35' })
+  private bulletTipMaterial = new THREE.MeshToonMaterial({ color: '#e0a46a' })
   private holder = new THREE.Group()
   private slide = new THREE.Mesh()
   private muzzle = new THREE.Object3D()
@@ -43,6 +47,14 @@ export class WeaponSystem {
   }
 
   get bulletCount() { return this.bullets.length }
+
+  setSkin(primary: THREE.ColorRepresentation, accent: THREE.ColorRepresentation) {
+    this.steelMaterial.color.set(primary)
+    this.accentMaterial.color.set(accent)
+    this.bulletMaterial.color.set(primary)
+    this.bulletTipMaterial.color.set(accent)
+    for (const material of this.trailMaterials) material.color.set(accent)
+  }
 
   clear() {
     for (const bullet of this.bullets) this.scene.remove(bullet.model, ...bullet.trail)
@@ -117,10 +129,8 @@ export class WeaponSystem {
 
   private createBulletModel() {
     const bullet = new THREE.Group()
-    const brass = new THREE.MeshToonMaterial({ color: '#c88a35' })
-    const copper = new THREE.MeshToonMaterial({ color: '#e0a46a' })
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(.16, .16, .85, 10), brass)
-    const tip = new THREE.Mesh(new THREE.ConeGeometry(.16, .35, 10), copper)
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(.16, .16, .85, 10), this.bulletMaterial)
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(.16, .35, 10), this.bulletTipMaterial)
     body.rotation.x = tip.rotation.x = Math.PI / 2
     tip.position.z = .6
     bullet.add(body, tip)
@@ -131,24 +141,22 @@ export class WeaponSystem {
 
   private buildModel() {
     const dark = new THREE.MeshToonMaterial({ color: '#222b3d' })
-    const steel = new THREE.MeshToonMaterial({ color: '#6f7f94' })
-    const red = new THREE.MeshToonMaterial({ color: '#ff5a4f' })
     const base = new THREE.Mesh(new THREE.CylinderGeometry(.48, .62, .28, 10), dark)
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(.15, .2, .72, 8), steel)
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(.15, .2, .72, 8), this.steelMaterial)
     post.position.y = .45
     const pistol = new THREE.Group()
     pistol.position.y = 1.02
-    this.slide = new THREE.Mesh(new RoundedBoxGeometry(.58, .46, 1.55, 3, .1), steel)
+    this.slide = new THREE.Mesh(new RoundedBoxGeometry(.58, .46, 1.55, 3, .1), this.steelMaterial)
     this.slide.position.z = .35
     const frame = new THREE.Mesh(new RoundedBoxGeometry(.5, .42, .95, 2, .08), dark)
     frame.position.set(0, -.28, .05)
-    const grip = new THREE.Mesh(new RoundedBoxGeometry(.42, .9, .48, 2, .08), red)
+    const grip = new THREE.Mesh(new RoundedBoxGeometry(.42, .9, .48, 2, .08), this.accentMaterial)
     grip.position.set(0, -.72, -.18)
     grip.rotation.x = -.25
     const barrel = new THREE.Mesh(new THREE.CylinderGeometry(.11, .11, 1.15, 10), dark)
     barrel.rotation.x = Math.PI / 2
     barrel.position.set(0, .03, 1.05)
-    const sight = new THREE.Mesh(new THREE.BoxGeometry(.12, .12, .32), red)
+    const sight = new THREE.Mesh(new THREE.BoxGeometry(.12, .12, .32), this.accentMaterial)
     sight.position.set(0, .31, .68)
     this.muzzle.position.set(0, .03, 1.68)
     this.flash.position.copy(this.muzzle.position)

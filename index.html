@@ -60,6 +60,33 @@
         <div class="lobby-card">
           <header class="lobby-header"><div><small>MATCH LOBBY</small><h2>ARENA READY</h2></div><span><i></i> ONLINE</span></header>
           <div class="room-code-panel"><div><small>ROOM CODE</small><strong id="lobby-room-code" class="lobby-room-code"></strong></div><p>Share this code with your crew</p></div>
+          <section class="garage" aria-label="Kart garage">
+            <div class="garage-heading"><div><small>GARAGE</small><h3>CHOOSE YOUR LOADOUT</h3></div><strong id="garage-name">INFERNO</strong></div>
+            <div class="garage-body">
+              <div id="kart-preview" class="kart-preview" role="img" aria-label="Selected kart side preview">
+                <svg viewBox="0 0 300 150" aria-hidden="true">
+                  <ellipse class="preview-shadow" cx="151" cy="128" rx="119" ry="12" />
+                  <g class="preview-exhaust"><path d="M56 103H19" /><path d="M53 113H29" /></g>
+                  <g class="preview-kart-model">
+                    <path class="preview-accent" d="M48 94 64 75h37l15 18-4 13H50Z" />
+                    <path class="preview-paint" d="M62 92c11-25 37-39 78-39h45l36 23 35 8 18 26H52Z" />
+                    <path class="preview-glass" d="m127 56 17-25h37l22 34-19 2-13-23h-22l-10 17Z" />
+                    <path class="preview-accent" d="m197 73 59 11 15 20-72-5Z" />
+                    <rect class="preview-gun" x="208" y="49" width="44" height="11" rx="4" />
+                    <rect class="preview-accent" x="218" y="58" width="10" height="13" rx="3" />
+                    <rect class="preview-gun" x="196" y="59" width="7" height="18" rx="2" />
+                    <path class="preview-dark" d="M45 103h230l-7 17H51Z" />
+                    <g class="preview-wheel"><circle cx="91" cy="115" r="24" /><circle class="preview-rim" cx="91" cy="115" r="10" /></g>
+                    <g class="preview-wheel"><circle cx="231" cy="115" r="24" /><circle class="preview-rim" cx="231" cy="115" r="10" /></g>
+                  </g>
+                </svg>
+              </div>
+              <div class="garage-controls">
+                <div id="garage-options" class="garage-options" role="radiogroup" aria-label="Cosmetic loadout"></div>
+                <p><i id="garage-effect"></i> PAINT · EXHAUST · PISTOL</p>
+              </div>
+            </div>
+          </section>
           <div class="players-heading"><h3>DRIVERS</h3><span><b id="lobby-player-count">1</b> / 8</span></div>
           <div id="lobby-players" class="lobby-players"></div>
           <div class="lobby-footer"><p id="room-status">WAITING FOR THE OWNER TO START…</p><button id="start-room" class="race-button hidden"><span><small>EVERYONE READY?</small>START BATTLE</span><b>›</b></button></div>

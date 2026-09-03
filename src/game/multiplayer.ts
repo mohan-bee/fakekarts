@@ -2,7 +2,7 @@ import mqtt, { type MqttClient } from 'mqtt'
 import type { KartState } from './physics'
 import { generateRoomCode } from './roomCode'
 
-export type Peer = KartState & { id: string; name: string; score: number; seen: number }
+export type Peer = KartState & { id: string; name: string; score: number; cosmetic: number; seen: number }
 
 type RoomMessage =
   | { type: 'state'; player: Omit<Peer, 'seen'> }
@@ -27,7 +27,7 @@ export class Multiplayer {
   private seenHits = new Set<string>()
 
   constructor(private name: () => string) {
-    this.localPlayer = { id: this.id, name: this.name(), x: 0, y: 0, z: 12, heading: 0, speed: 0, verticalSpeed: 0, health: 100, score: 0 }
+    this.localPlayer = { id: this.id, name: this.name(), x: 0, y: 0, z: 12, heading: 0, speed: 0, verticalSpeed: 0, health: 100, score: 0, cosmetic: 0 }
   }
 
   async createRoom() {
@@ -106,10 +106,15 @@ export class Multiplayer {
   }
 
   send(state: KartState, score: number) {
-    this.localPlayer = { ...state, id: this.id, name: this.name(), score }
+    this.localPlayer = { ...state, id: this.id, name: this.name(), score, cosmetic: this.localPlayer.cosmetic }
     this.publishLocalState()
     const stale = performance.now() - 3000
     for (const [id, player] of this.peers) if (player.seen < stale) this.removePeer(id)
+  }
+
+  setCosmetic(cosmetic: number) {
+    this.localPlayer.cosmetic = cosmetic
+    this.publishLocalState()
   }
 
   disconnect() {
