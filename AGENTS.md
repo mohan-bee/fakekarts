@@ -16,7 +16,10 @@
 - `src/game/cosmetics.ts` owns the selectable kart, exhaust, and weapon palettes.
 - `src/game/effects.ts` owns short-lived smoke and debris.
 - `src/game/kart.ts` owns the procedural kart model.
+- `src/game/match.ts` owns mode rules, win conditions, and race progress.
 - `src/game/obstacles.ts` owns playground props, ramps, and obstacle collisions.
+- `src/game/powerups.ts` owns collectible buffs and their timers.
+- `src/game/secondary.ts` owns grenades, landmines, and spring traps.
 - `src/game/physics.ts` owns deterministic kart movement.
 - `src/game/settings.ts` owns persisted player settings and settings UI bindings.
 - `src/game/weapon.ts` owns the mounted pistol, bullets, and weapon animation.

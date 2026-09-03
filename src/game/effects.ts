@@ -7,6 +7,7 @@ export class Effects {
   private particles: Particle[] = []
   private exhaustTimers = new Map<string, number>()
   private driftTimer = 0
+  private jetpackTimer = 0
   private smokeGeometry = new THREE.SphereGeometry(.42, 7, 5)
   private debrisGeometry = new THREE.BoxGeometry(.35, .18, .7)
   private dropletGeometry = new THREE.SphereGeometry(.2, 7, 5)
@@ -41,6 +42,20 @@ export class Effects {
       ),
       new THREE.Vector3((Math.random() - .5) * .4, .7 + Math.random() * .5, (Math.random() - .5) * .4),
       true,
+    )
+  }
+
+  jetpack(state: KartState, dt: number, thrusting: boolean) {
+    this.jetpackTimer -= dt
+    if (!thrusting || this.jetpackTimer > 0) return
+    this.jetpackTimer = .045
+    for (const side of [-.65, .65]) this.spawn(
+      new THREE.Vector3(state.x - Math.sin(state.heading) * 1.7 + Math.cos(state.heading) * side, (state.y ?? 0) + .55, state.z - Math.cos(state.heading) * 1.7 - Math.sin(state.heading) * side),
+      new THREE.Vector3((Math.random() - .5) * .5, -2.8, (Math.random() - .5) * .5),
+      true,
+      Math.random() > .5 ? '#ffd447' : '#ff6b3d',
+      .45,
+      .65,
     )
   }
 

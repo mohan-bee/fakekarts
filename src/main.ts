@@ -4,7 +4,9 @@ import './styles/hud.css'
 import './styles/settings.css'
 import { Game } from './game/Game'
 import { COSMETICS, cosmeticAt } from './game/cosmetics'
+import type { MatchMode } from './game/match'
 import { isRoomCode, normalizeRoomCode } from './game/roomCode'
+import { isSecondaryKind } from './game/secondary'
 import { setupSettings } from './game/settings'
 
 const byId = <T extends HTMLElement>(id: string) => document.querySelector<T>(`#${id}`)!
@@ -18,6 +20,8 @@ const lobbyPlayers = byId('lobby-players')
 const roomStatus = byId('room-status')
 const presenceToast = byId('presence-toast')
 const joinError = byId('join-error')
+const matchMode = byId<HTMLSelectElement>('match-mode')
+const secondaryChoice = byId<HTMLSelectElement>('secondary-choice')
 room.value = normalizeRoomCode(new URLSearchParams(location.search).get('room') || '')
 const settings = setupSettings()
 const game = new Game(byId<HTMLCanvasElement>('world'), () => name.value.trim() || 'Rookie', settings)
@@ -55,6 +59,18 @@ for (const cosmetic of COSMETICS) {
 }
 selectCosmetic(Number(localStorage.getItem('fakekarts-cosmetic')))
 
+const storedSecondary = localStorage.getItem('fakekarts-secondary')
+if (isSecondaryKind(storedSecondary)) secondaryChoice.value = storedSecondary
+game.setSecondary(isSecondaryKind(secondaryChoice.value) ? secondaryChoice.value : 'grenade')
+secondaryChoice.addEventListener('change', () => {
+  if (!isSecondaryKind(secondaryChoice.value)) return
+  localStorage.setItem('fakekarts-secondary', secondaryChoice.value)
+  game.setSecondary(secondaryChoice.value)
+})
+matchMode.addEventListener('change', () => {
+  startButton.querySelector('span')!.innerHTML = `<small>EVERYONE READY?</small>START ${matchMode.value === 'race' ? 'RACE' : 'BATTLE'}`
+})
+
 let countdownRunning = false
 let raceActive = false
 let toastTimer = 0
@@ -84,7 +100,7 @@ game.onPresence((playerName, action) => {
   toastTimer = window.setTimeout(() => { presenceToast.className = 'presence-toast' }, 2000)
 })
 
-const runCountdown = async (startAt: number) => {
+const runCountdown = async (startAt: number, mode: MatchMode) => {
   if (countdownRunning) return
   countdownRunning = true
   await new Promise(resolve => setTimeout(resolve, Math.max(0, startAt - Date.now())))
@@ -99,7 +115,7 @@ const runCountdown = async (startAt: number) => {
   byId('menu').classList.add('hidden')
   byId('hud').classList.remove('hidden')
   document.querySelector('.controls')!.classList.add('active')
-  game.start()
+  game.start(mode)
   raceActive = true
 }
 
@@ -127,6 +143,7 @@ const enterLobby = async (action: () => Promise<string>, isOwner: boolean) => {
   renderRoster([])
   if (!countdownRunning) lobby.classList.remove('hidden')
   roomStatus.textContent = isOwner ? 'ROOM READY — SHARE THE CODE, THEN START' : 'WAITING FOR THE OWNER TO START…'
+  matchMode.disabled = !isOwner
   if (isOwner) startButton.classList.remove('hidden')
 }
 
@@ -135,7 +152,7 @@ createButton.addEventListener('click', () => enterLobby(() => game.createRoom(),
 startButton.addEventListener('click', () => {
   startButton.disabled = true
   roomStatus.textContent = 'STARTING FOR EVERYONE…'
-  game.startRoomRace()
+  game.startRoomRace(matchMode.value as MatchMode)
 })
 
 joinButton.addEventListener('click', () => {
@@ -161,5 +178,7 @@ byId('sound').addEventListener('click', event => {
   button.classList.toggle('muted')
   button.textContent = button.classList.contains('muted') ? '×' : '♪'
 })
+
+byId('play-again').addEventListener('click', () => location.reload())
 
 addEventListener('pagehide', () => game.disconnect())
