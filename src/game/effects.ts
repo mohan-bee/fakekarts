@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import type { KartState } from './physics'
 
-type Particle = { mesh: THREE.Mesh; velocity: THREE.Vector3; life: number; smoke: boolean }
+type Particle = { mesh: THREE.Mesh; velocity: THREE.Vector3; life: number; duration: number; smoke: boolean }
 
 export class Effects {
   private particles: Particle[] = []
@@ -9,6 +9,7 @@ export class Effects {
   private driftTimer = 0
   private smokeGeometry = new THREE.SphereGeometry(.42, 7, 5)
   private debrisGeometry = new THREE.BoxGeometry(.35, .18, .7)
+  private shockwaveGeometry = new THREE.SphereGeometry(.65, 12, 8)
 
   constructor(private scene: THREE.Scene) {}
 
@@ -47,11 +48,36 @@ export class Effects {
   }
 
   bulletImpact(position: THREE.Vector3) {
-    for (let i = 0; i < 9; i++) this.spawn(
+    const shockwave = new THREE.Mesh(
+      this.shockwaveGeometry,
+      new THREE.MeshBasicMaterial({ color: '#ffb12b', transparent: true, opacity: .75, wireframe: true, depthWrite: false, blending: THREE.AdditiveBlending }),
+    )
+    shockwave.position.copy(position)
+    this.scene.add(shockwave)
+    this.particles.push({ mesh: shockwave, velocity: new THREE.Vector3(), life: .45, duration: .45, smoke: true })
+    for (let i = 0; i < 4; i++) this.spawn(
       position.clone(),
-      new THREE.Vector3((Math.random() - .5) * 7, 2 + Math.random() * 5, (Math.random() - .5) * 7),
+      new THREE.Vector3((Math.random() - .5) * 2, 1 + Math.random() * 2, (Math.random() - .5) * 2),
+      true,
+      i % 2 ? '#fff7c4' : '#ff9e2f',
+      .35,
+      .9,
+    )
+    for (let i = 0; i < 18; i++) this.spawn(
+      position.clone(),
+      new THREE.Vector3((Math.random() - .5) * 15, 3 + Math.random() * 10, (Math.random() - .5) * 15),
       false,
-      '#ffd447',
+      i % 3 ? '#ffd447' : '#ff664f',
+      .8,
+      .45,
+    )
+    for (let i = 0; i < 5; i++) this.spawn(
+      position.clone(),
+      new THREE.Vector3((Math.random() - .5) * 2.5, 2 + Math.random() * 2, (Math.random() - .5) * 2.5),
+      true,
+      '#505968',
+      .85,
+      .75,
     )
   }
 
@@ -76,7 +102,7 @@ export class Effects {
       if (particle.smoke) {
         particle.velocity.y += .3 * dt
         particle.mesh.scale.addScalar(dt * 1.6)
-        ;(particle.mesh.material as THREE.MeshBasicMaterial).opacity = Math.max(0, particle.life / 1.15) * .55
+        ;(particle.mesh.material as THREE.MeshBasicMaterial).opacity = Math.max(0, particle.life / particle.duration) * .65
       } else {
         particle.velocity.y -= 18 * dt
         particle.mesh.rotation.x += dt * 8
@@ -90,15 +116,16 @@ export class Effects {
     }
   }
 
-  private spawn(position: THREE.Vector3, velocity: THREE.Vector3, smoke: boolean, color?: THREE.ColorRepresentation) {
+  private spawn(position: THREE.Vector3, velocity: THREE.Vector3, smoke: boolean, color?: THREE.ColorRepresentation, duration = smoke ? 1.15 : 1.8, scale = 1) {
     const material = smoke
       ? new THREE.MeshBasicMaterial({ color: color ?? '#d9dde2', transparent: true, opacity: .55, depthWrite: false })
       : new THREE.MeshToonMaterial({ color: color ?? '#c8793d' })
     const particle = new THREE.Mesh(smoke ? this.smokeGeometry : this.debrisGeometry, material)
     particle.position.copy(position)
+    particle.scale.setScalar(scale)
     particle.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3)
     particle.castShadow = !smoke
     this.scene.add(particle)
-    this.particles.push({ mesh: particle, velocity, life: smoke ? 1.15 : 1.8, smoke })
+    this.particles.push({ mesh: particle, velocity, life: duration, duration, smoke })
   }
 }

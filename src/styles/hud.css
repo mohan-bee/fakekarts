@@ -20,9 +20,14 @@
 .drift-status.active { opacity: 1; transform: translate(-50%, 0) skew(-8deg); }
 .rear-view { position: absolute; left: 50%; top: 90px; padding: 6px 11px; color: #fff; background: rgba(9,29,45,.72); border: 1px solid rgba(255,212,71,.55); border-radius: 5px; opacity: 0; font: 9px 'Archivo Black'; letter-spacing: 2px; transform: translate(-50%,-8px); transition: .15s; }
 .rear-view.active { opacity: 1; transform: translate(-50%,0); }
-.weapon-hud { position: absolute; left: 30px; bottom: 28px; display: grid; grid-template-columns: auto auto; padding: 10px 13px; background: rgba(9,29,45,.72); border: 1px solid rgba(255,255,255,.18); border-radius: 8px; }
-.weapon-hud small { grid-column: 1 / -1; color: #8bd7ff; font-size: 8px; letter-spacing: 2px; }
-.weapon-hud b { font: 14px 'Archivo Black'; }.weapon-hud span { margin-left: 14px; color: #ffd447; font-size: 17px; }
+.weapon-hud { position: absolute; left: 30px; bottom: 28px; display: grid; grid-template-columns: 30px auto 34px; gap: 9px; align-items: center; padding: 8px 10px; background: rgba(9,29,45,.78); border: 1px solid rgba(255,255,255,.18); border-left: 3px solid #ffd447; border-radius: 7px; }
+.weapon-hud > i { position: relative; width: 28px; height: 11px; background: #9aa7b8; border-radius: 2px 5px 2px 2px; transform: skew(-8deg); }
+.weapon-hud > i::after { content: ''; position: absolute; left: 8px; top: 8px; width: 8px; height: 11px; background: #ff5a4f; border-radius: 0 0 2px 2px; transform: skew(12deg); }
+.weapon-hud span { display: grid; gap: 1px; }
+.weapon-hud small { color: #8bd7ff; font-size: 6px; letter-spacing: 1.5px; }
+.weapon-hud b { font: 10px 'Archivo Black'; white-space: nowrap; }
+.weapon-hud > strong { padding-left: 8px; color: #ffd447; border-left: 1px solid rgba(255,255,255,.15); font: 18px/1 'Archivo Black'; text-align: center; }
+.weapon-hud > strong small { display: block; margin-top: 3px; color: #7898ac; font: 5px 'DM Mono'; letter-spacing: 1px; }
 .crosshair { position: absolute; left: 50%; top: 47%; width: 30px; height: 30px; color: rgba(255,255,255,.8); border: 2px solid rgba(255,255,255,.55); border-radius: 50%; font: 20px/25px monospace; text-align: center; transform: translate(-50%,-50%); text-shadow: 0 1px 3px #17253b; transition: .1s; }
 .crosshair.hit { color: #ff5a4f; border-color: #ffd447; background: rgba(255,212,71,.28); transform: translate(-50%,-50%) scale(1.35); }
 .players { position: absolute; top: 95px; right: 28px; display: grid; gap: 7px; font-size: 9px; text-align: right; }
@@ -48,5 +53,5 @@
 .controls .fire-control { width: 70px; color: #fff; background: #ff5a4f; border-color: #ffb1aa; font-size: 11px; font-weight: 900; }
 .controls div { display: flex; gap: 8px; margin-left: auto; }
 
-@media (pointer: coarse) { .controls.active { display: flex; } .speed { bottom: 100px; } }
+@media (pointer: coarse) { .controls.active { display: flex; } .speed, .weapon-hud { bottom: 100px; } }
 @media (max-width: 700px) { .players { top: 80px; } .leaderboard { top: 190px; right: 18px; width: 165px; } .position, .lap { top: 82px; left: 18px; } .lap { left: 104px; } .health { left: 18px; top: 145px; width: 150px; } }
