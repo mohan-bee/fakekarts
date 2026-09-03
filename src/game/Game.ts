@@ -52,7 +52,7 @@ export class Game {
       const peer = this.multiplayer.peers.get(id)
       if (peer) this.remoteWeapons.get(id)?.shoot(peer)
     })
-    bindControls(this.controls)
+    bindControls(this.controls, () => document.querySelector('#rear-view')!.classList.toggle('active', this.chaseCamera.toggleReverse()))
     addEventListener('resize', () => this.resize())
     this.resize()
     this.animate()

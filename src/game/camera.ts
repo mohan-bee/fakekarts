@@ -2,16 +2,19 @@ import * as THREE from 'three'
 import type { KartState } from './physics'
 import type { GameSettings } from './settings'
 
-export const stepReverseView = (current: number, speed: number, dt: number) => {
-  const target = speed < -.5 ? 1 : 0
+export const stepReverseView = (current: number, enabled: boolean, dt: number) => {
+  const target = enabled ? 1 : 0
   return THREE.MathUtils.lerp(current, target, 1 - Math.exp(-5 * dt))
 }
 
 export class ChaseCamera {
   private lookAt = new THREE.Vector3()
   private reverseView = 0
+  private reverseEnabled = false
 
   constructor(private camera: THREE.PerspectiveCamera) {}
+
+  toggleReverse() { return this.reverseEnabled = !this.reverseEnabled }
 
   snap(state: KartState) {
     this.camera.position.set(state.x - Math.sin(state.heading) * 13, 8, state.z - Math.cos(state.heading) * 13)
@@ -22,7 +25,7 @@ export class ChaseCamera {
   update(state: KartState, dt: number, settings: GameSettings) {
     const speed = Math.abs(state.speed)
     const distance = settings.cameraDistance + speed * .06
-    this.reverseView = stepReverseView(this.reverseView, state.speed, dt)
+    this.reverseView = stepReverseView(this.reverseView, this.reverseEnabled, dt)
     const cameraHeading = state.heading + Math.PI * this.reverseView
     const desired = new THREE.Vector3(
       state.x - Math.sin(cameraHeading) * distance,
