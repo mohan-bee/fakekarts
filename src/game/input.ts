@@ -1,8 +1,9 @@
 import type { Controls } from './physics'
 
-export function bindControls(controls: Controls) {
+export function bindControls(controls: Controls, toggleReverse: () => void) {
   const keys: Record<string, keyof Controls> = { KeyW: 'forward', ArrowUp: 'forward', KeyS: 'back', ArrowDown: 'back', KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right', Space: 'drift', KeyF: 'fire' }
   for (const event of ['keydown', 'keyup'] as const) addEventListener(event, e => {
+    if (event === 'keydown' && e.code === 'KeyR' && !e.repeat) { e.preventDefault(); toggleReverse() }
     const control = keys[e.code]
     if (control) { e.preventDefault(); controls[control] = event === 'keydown' }
   })

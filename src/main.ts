@@ -27,9 +27,16 @@ let toastTimer = 0
 
 const renderRoster = (players: Array<{ name: string }>) => {
   lobbyPlayers.replaceChildren()
+  byId('lobby-player-count').textContent = String(players.length + 1)
   for (const playerName of [`${name.value.trim() || 'Rookie'} (YOU)`, ...players.map(player => player.name)]) {
     const row = document.createElement('span')
-    row.append(document.createElement('i'), playerName)
+    const avatar = document.createElement('i')
+    avatar.textContent = playerName.charAt(0).toUpperCase()
+    const label = document.createElement('b')
+    label.textContent = playerName
+    const ready = document.createElement('small')
+    ready.textContent = 'READY'
+    row.append(avatar, label, ready)
     lobbyPlayers.append(row)
   }
 }

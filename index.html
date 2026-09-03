@@ -26,6 +26,7 @@
         <div class="health"><small>ARMOR</small><b id="health-value">100</b><span>HP</span><div><i id="healthbar"></i></div></div>
         <div class="speed"><strong id="speed">0</strong><span>KM/H</span><div><i id="speedbar"></i></div></div>
         <div id="drift-status" class="drift-status">DRIFTING</div>
+        <div id="rear-view" class="rear-view">REAR VIEW</div>
         <div class="weapon-hud"><small>WEAPON</small><b>PISTOL</b><span>∞</span></div>
         <div class="crosshair" aria-hidden="true">+</div>
         <div class="players" id="players"></div>
@@ -33,27 +34,35 @@
       </section>
 
       <section id="menu" class="menu">
-        <p class="eyebrow">WELCOME TO</p>
-        <h1>FAKE<br /><em>KARTS</em></h1>
-        <p class="tagline">Tiny wheels. Big feelings.</p>
-        <label class="name-field">DRIVER NAME<input id="name" maxlength="12" value="Mohan" /></label>
-        <label class="name-field room-field">ROOM CODE<input id="room-code" maxlength="3" inputmode="numeric" pattern="[0-9]{3}" autocomplete="off" spellcheck="false" /></label>
-        <div class="room-actions">
-          <button id="create-room" class="create-button">CREATE ROOM</button>
-          <button id="join-room" class="race-button"><span>JOIN ROOM</span><b>›</b></button>
+        <div class="menu-shell">
+          <div class="menu-intro">
+            <p class="eyebrow"><span></span> ONLINE BATTLE ARENA</p>
+            <h1>FAKE<br /><em>KARTS</em></h1>
+            <p class="tagline">Drift hard. Aim fast. Be the last kart rolling.</p>
+            <div class="feature-row"><span>150 KM/H</span><span>LIVE MULTIPLAYER</span><span>TOON COMBAT</span></div>
+          </div>
+          <div class="match-card">
+            <header><small>QUICK PLAY</small><h2>ENTER THE ARENA</h2><p>Create a fresh room or join your crew.</p></header>
+            <label class="name-field">DRIVER NAME<input id="name" maxlength="12" value="Mohan" /></label>
+            <label class="name-field room-field">ROOM CODE<input id="room-code" maxlength="3" inputmode="numeric" pattern="[0-9]{3}" placeholder="000" autocomplete="off" spellcheck="false" /></label>
+            <div class="room-actions">
+              <button id="create-room" class="create-button"><small>NEW MATCH</small>CREATE ROOM</button>
+              <button id="join-room" class="race-button"><span><small>CODE READY?</small>JOIN ROOM</span><b>›</b></button>
+            </div>
+            <p id="join-error" class="join-error" role="alert"></p>
+            <p class="privacy-note"><i></i> PUBLIC TEST SERVERS · NO ACCOUNT NEEDED</p>
+          </div>
         </div>
-        <p id="join-error" class="join-error" role="alert"></p>
-        <p class="hint"><kbd>WASD</kbd> drive · <kbd>SPACE</kbd> drift · <kbd>F</kbd> or click to fire</p>
+        <p class="hint"><kbd>WASD</kbd> DRIVE <span>·</span> <kbd>SPACE</kbd> DRIFT <span>·</span> <kbd>F</kbd> FIRE <span>·</span> <kbd>R</kbd> REAR VIEW</p>
       </section>
 
       <section id="lobby" class="arena-lobby hidden" aria-label="Room lobby">
         <div class="lobby-card">
-          <p class="room-code-label">ROOM CODE</p>
-          <strong id="lobby-room-code" class="lobby-room-code"></strong>
-          <h2>PLAYERS</h2>
+          <header class="lobby-header"><div><small>MATCH LOBBY</small><h2>ARENA READY</h2></div><span><i></i> ONLINE</span></header>
+          <div class="room-code-panel"><div><small>ROOM CODE</small><strong id="lobby-room-code" class="lobby-room-code"></strong></div><p>Share this code with your crew</p></div>
+          <div class="players-heading"><h3>DRIVERS</h3><span><b id="lobby-player-count">1</b> / 8</span></div>
           <div id="lobby-players" class="lobby-players"></div>
-          <p id="room-status">WAITING FOR THE OWNER TO START…</p>
-          <button id="start-room" class="race-button hidden"><span>START RACE</span><b>›</b></button>
+          <div class="lobby-footer"><p id="room-status">WAITING FOR THE OWNER TO START…</p><button id="start-room" class="race-button hidden"><span><small>EVERYONE READY?</small>START BATTLE</span><b>›</b></button></div>
         </div>
       </section>
 

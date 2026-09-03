@@ -24,7 +24,7 @@
 - `src/game/multiplayer.ts` owns peer discovery and state transport.
 - `src/main.ts` owns menu interactions and game startup.
 - `src/styles/base.css` owns the canvas and top bar.
-- `src/styles/menu.css` owns the start menu.
+- `src/styles/menu.css` owns the start and room lobby screens.
 - `src/styles/hud.css` owns race HUD and touch controls.
 - `src/styles/settings.css` owns the settings dialog.
 - `index.html` owns static UI structure.
