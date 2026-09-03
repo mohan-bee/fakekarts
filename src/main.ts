@@ -28,6 +28,11 @@ const selectCosmetic = (id: number) => {
   localStorage.setItem('fakekarts-cosmetic', String(cosmetic.id))
   byId('garage-name').textContent = cosmetic.name.toUpperCase()
   byId('garage-effect').style.background = cosmetic.exhaust
+  const preview = byId('kart-preview')
+  preview.style.setProperty('--paint', cosmetic.paint)
+  preview.style.setProperty('--accent', cosmetic.accent)
+  preview.style.setProperty('--exhaust', cosmetic.exhaust)
+  preview.style.setProperty('--gun', cosmetic.gun)
   for (const button of garageOptions.querySelectorAll<HTMLButtonElement>('button')) {
     const selected = Number(button.dataset.cosmetic) === cosmetic.id
     button.classList.toggle('selected', selected)
