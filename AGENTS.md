@@ -13,6 +13,7 @@
 - `src/game/arena.ts` owns arena geometry, lighting, and arena boundaries.
 - `src/game/camera.ts` owns chase camera behavior.
 - `src/game/combat.ts` owns health, damage, respawning, and kart-to-kart collision rules.
+- `src/game/cosmetics.ts` owns the selectable kart, exhaust, and weapon palettes.
 - `src/game/effects.ts` owns short-lived smoke and debris.
 - `src/game/kart.ts` owns the procedural kart model.
 - `src/game/obstacles.ts` owns playground props, ramps, and obstacle collisions.

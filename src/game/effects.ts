@@ -5,24 +5,29 @@ type Particle = { mesh: THREE.Mesh; velocity: THREE.Vector3; life: number; durat
 
 export class Effects {
   private particles: Particle[] = []
-  private smokeTimer = 0
+  private exhaustTimers = new Map<string, number>()
   private driftTimer = 0
   private smokeGeometry = new THREE.SphereGeometry(.42, 7, 5)
   private debrisGeometry = new THREE.BoxGeometry(.35, .18, .7)
+  private dropletGeometry = new THREE.SphereGeometry(.2, 7, 5)
   private shockwaveGeometry = new THREE.SphereGeometry(.65, 12, 8)
 
   constructor(private scene: THREE.Scene) {}
 
-  exhaust(state: KartState, dt: number) {
-    this.smokeTimer -= dt
-    if (Math.abs(state.speed) < 2 || this.smokeTimer > 0) return
-    this.smokeTimer = .055 + Math.random() * .045
+  exhaust(state: KartState, dt: number, color: THREE.ColorRepresentation = '#d9dde2', id = 'local') {
+    const timer = (this.exhaustTimers.get(id) ?? 0) - dt
+    this.exhaustTimers.set(id, timer)
+    if (Math.abs(state.speed) < 2 || timer > 0) return
+    this.exhaustTimers.set(id, .055 + Math.random() * .045)
     this.spawn(
       new THREE.Vector3(state.x - Math.sin(state.heading) * 2.4, (state.y ?? 0) + .75, state.z - Math.cos(state.heading) * 2.4),
       new THREE.Vector3((Math.random() - .5) * .7, 1.3 + Math.random(), (Math.random() - .5) * .7),
       true,
+      color,
     )
   }
+
+  forgetExhaust(id: string) { this.exhaustTimers.delete(id) }
 
   drift(state: KartState, dt: number) {
     this.driftTimer -= dt
@@ -91,6 +96,33 @@ export class Effects {
     )
   }
 
+  eliminationBurst(position: THREE.Vector3) {
+    const pulse = new THREE.Mesh(
+      this.shockwaveGeometry,
+      new THREE.MeshBasicMaterial({ color: '#ff1738', transparent: true, opacity: .82, wireframe: true, depthWrite: false, blending: THREE.AdditiveBlending }),
+    )
+    pulse.position.copy(position)
+    this.scene.add(pulse)
+    this.particles.push({ mesh: pulse, velocity: new THREE.Vector3(), life: .65, duration: .65, smoke: true })
+    for (let i = 0; i < 34; i++) this.spawn(
+      position.clone(),
+      new THREE.Vector3((Math.random() - .5) * 13, 3 + Math.random() * 10, (Math.random() - .5) * 13),
+      false,
+      i % 3 ? '#e31b3d' : '#7d1028',
+      1.3,
+      .6 + Math.random() * 1.35,
+      this.dropletGeometry,
+    )
+    for (let i = 0; i < 7; i++) this.spawn(
+      position.clone(),
+      new THREE.Vector3((Math.random() - .5) * 3, 2 + Math.random() * 3, (Math.random() - .5) * 3),
+      true,
+      '#6b1628',
+      1.1,
+      .7,
+    )
+  }
+
   muzzleSmoke(position: THREE.Vector3, direction: THREE.Vector3) {
     for (let i = 0; i < 3; i++) this.spawn(position.clone(), direction.clone().multiplyScalar(2 + Math.random() * 2).add(new THREE.Vector3(0, .7, 0)), true)
   }
@@ -116,11 +148,11 @@ export class Effects {
     }
   }
 
-  private spawn(position: THREE.Vector3, velocity: THREE.Vector3, smoke: boolean, color?: THREE.ColorRepresentation, duration = smoke ? 1.15 : 1.8, scale = 1) {
+  private spawn(position: THREE.Vector3, velocity: THREE.Vector3, smoke: boolean, color?: THREE.ColorRepresentation, duration = smoke ? 1.15 : 1.8, scale = 1, geometry?: THREE.BufferGeometry) {
     const material = smoke
       ? new THREE.MeshBasicMaterial({ color: color ?? '#d9dde2', transparent: true, opacity: .55, depthWrite: false })
       : new THREE.MeshToonMaterial({ color: color ?? '#c8793d' })
-    const particle = new THREE.Mesh(smoke ? this.smokeGeometry : this.debrisGeometry, material)
+    const particle = new THREE.Mesh(geometry ?? (smoke ? this.smokeGeometry : this.debrisGeometry), material)
     particle.position.copy(position)
     particle.scale.setScalar(scale)
     particle.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3)

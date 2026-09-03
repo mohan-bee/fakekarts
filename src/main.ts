@@ -3,6 +3,7 @@ import './styles/menu.css'
 import './styles/hud.css'
 import './styles/settings.css'
 import { Game } from './game/Game'
+import { COSMETICS, cosmeticAt } from './game/cosmetics'
 import { isRoomCode, normalizeRoomCode } from './game/roomCode'
 import { setupSettings } from './game/settings'
 
@@ -20,6 +21,34 @@ const joinError = byId('join-error')
 room.value = normalizeRoomCode(new URLSearchParams(location.search).get('room') || '')
 const settings = setupSettings()
 const game = new Game(byId<HTMLCanvasElement>('world'), () => name.value.trim() || 'Rookie', settings)
+const garageOptions = byId('garage-options')
+
+const selectCosmetic = (id: number) => {
+  const cosmetic = cosmeticAt(id)
+  localStorage.setItem('fakekarts-cosmetic', String(cosmetic.id))
+  byId('garage-name').textContent = cosmetic.name.toUpperCase()
+  byId('garage-effect').style.background = cosmetic.exhaust
+  for (const button of garageOptions.querySelectorAll<HTMLButtonElement>('button')) {
+    const selected = Number(button.dataset.cosmetic) === cosmetic.id
+    button.classList.toggle('selected', selected)
+    button.setAttribute('aria-checked', String(selected))
+  }
+  game.setCosmetic(cosmetic.id)
+}
+
+for (const cosmetic of COSMETICS) {
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.dataset.cosmetic = String(cosmetic.id)
+  button.setAttribute('role', 'radio')
+  button.setAttribute('aria-label', cosmetic.name)
+  button.style.setProperty('--paint', cosmetic.paint)
+  button.style.setProperty('--accent', cosmetic.accent)
+  button.innerHTML = '<i></i><span></span>'
+  button.addEventListener('click', () => selectCosmetic(cosmetic.id))
+  garageOptions.append(button)
+}
+selectCosmetic(Number(localStorage.getItem('fakekarts-cosmetic')))
 
 let countdownRunning = false
 let raceActive = false

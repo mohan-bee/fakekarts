@@ -14,6 +14,8 @@ export function createKart(color: THREE.ColorRepresentation) {
   const dark = toon('#202638')
   const metal = toon('#9aa7b8')
   const yellow = toon('#ffd447')
+  kart.userData.paintMaterial = paint
+  kart.userData.accentMaterial = yellow
 
   const body = part(new THREE.CapsuleGeometry(.95, 2.15, 4, 10), paint, 0, 1.05)
   body.rotation.x = Math.PI / 2
@@ -49,4 +51,9 @@ export function createKart(color: THREE.ColorRepresentation) {
     kart.add(exhaust)
   }
   return kart
+}
+
+export function styleKart(kart: THREE.Group, paint: THREE.ColorRepresentation, accent: THREE.ColorRepresentation) {
+  ;(kart.userData.paintMaterial as THREE.MeshToonMaterial).color.set(paint)
+  ;(kart.userData.accentMaterial as THREE.MeshToonMaterial).color.set(accent)
 }
