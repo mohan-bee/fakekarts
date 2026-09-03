@@ -1,6 +1,8 @@
 import * as THREE from 'three'
 import type { KartState } from './physics'
 
+export const ARENA_RADIUS = 82
+
 const toon = (color: THREE.ColorRepresentation, map?: THREE.Texture) => new THREE.MeshToonMaterial({ color, map })
 const floorMesh = (geometry: THREE.BufferGeometry, color: THREE.ColorRepresentation, y = 0, map?: THREE.Texture) => {
   const item = new THREE.Mesh(geometry, toon(color, map))
@@ -62,7 +64,7 @@ export function createArena(scene: THREE.Scene) {
   scene.background = new THREE.Color('#8bd8ff')
   scene.fog = new THREE.Fog('#8bd8ff', 105, 210)
   scene.add(
-    floorMesh(new THREE.CircleGeometry(82, 96), '#c8b8e8'),
+    floorMesh(new THREE.CircleGeometry(ARENA_RADIUS, 96), '#c8b8e8'),
     floorMesh(new THREE.CircleGeometry(76, 96), '#ffffff', .025, concreteTexture()),
   )
 
