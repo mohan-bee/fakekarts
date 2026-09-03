@@ -1,5 +1,5 @@
 export type KartState = { x: number; z: number; heading: number; speed: number; y?: number; verticalSpeed?: number; drift?: number; health?: number }
-export type Controls = { forward: boolean; back: boolean; left: boolean; right: boolean; drift: boolean; fire: boolean }
+export type Controls = { forward: boolean; back: boolean; left: boolean; right: boolean; drift: boolean; fire: boolean; secondary?: boolean; jetpack?: boolean }
 export type Handling = { steeringSensitivity: number; driftStrength: number }
 export const KPH_PER_UNIT = 5.1
 export const MAX_SPEED = 150 / KPH_PER_UNIT

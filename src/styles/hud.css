@@ -28,6 +28,14 @@
 .weapon-hud b { font: 10px 'Archivo Black'; white-space: nowrap; }
 .weapon-hud > strong { padding-left: 8px; color: #ffd447; border-left: 1px solid rgba(255,255,255,.15); font: 18px/1 'Archivo Black'; text-align: center; }
 .weapon-hud > strong small { display: block; margin-top: 3px; color: #7898ac; font: 5px 'DM Mono'; letter-spacing: 1px; }
+.secondary-hud { position: absolute; left: 30px; bottom: 88px; display: flex; gap: 9px; align-items: center; padding: 8px 10px; background: rgba(9,29,45,.78); border: 1px solid rgba(255,255,255,.18); border-left: 3px solid #ff5a4f; border-radius: 7px; }
+.secondary-hud kbd { color: #fff; background: #ff5a4f; border-color: #a92e35; font: 10px 'Archivo Black'; }
+.secondary-hud span { display: grid; gap: 1px; }
+.secondary-hud small { color: #8bd7ff; font-size: 6px; letter-spacing: 1.5px; }
+.secondary-hud b { font: 10px 'Archivo Black'; }
+.powerup-status { position: absolute; top: 130px; left: 50%; display: flex; gap: 7px; transform: translateX(-50%); }
+.powerup-status span { padding: 7px 10px; color: #142436; background: #8bdfff; border: 2px solid #fff; border-radius: 100px; font: 8px 'Archivo Black'; box-shadow: 0 4px 12px rgba(0,0,0,.25); }
+.powerup-status b { color: #c52e3f; }
 .crosshair { position: absolute; left: 50%; top: 47%; width: 30px; height: 30px; color: rgba(255,255,255,.8); border: 2px solid rgba(255,255,255,.55); border-radius: 50%; font: 20px/25px monospace; text-align: center; transform: translate(-50%,-50%); text-shadow: 0 1px 3px #17253b; transition: .1s; }
 .crosshair.hit { color: #ff5a4f; border-color: #ffd447; background: rgba(255,212,71,.28); transform: translate(-50%,-50%) scale(1.35); }
 .players { position: absolute; top: 95px; right: 28px; display: grid; gap: 7px; font-size: 9px; text-align: right; }
@@ -45,13 +53,23 @@
 .presence-toast.show { opacity: 1; transform: translate(-50%,0); }
 .presence-toast.joined { border: 1px solid rgba(88,239,139,.55); }
 .presence-toast.left { border: 1px solid rgba(255,90,79,.55); }
+.powerup-toast { position: fixed; z-index: 10; left: 50%; top: 175px; padding: 10px 16px; opacity: 0; color: #18273a; background: #ffd447; border: 2px solid #fff; border-radius: 100px; pointer-events: none; font: 10px 'Archivo Black'; transform: translate(-50%,-12px); transition: .2s; }
+.powerup-toast.show { opacity: 1; transform: translate(-50%,0); }
+.match-result { position: fixed; z-index: 20; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; opacity: 0; visibility: hidden; background: rgba(5,18,31,.86); backdrop-filter: blur(10px); transition: .25s; }
+.match-result.show { opacity: 1; visibility: visible; }
+.match-result small { color: #8bdfff; letter-spacing: 4px; }
+.match-result strong { color: #ffd447; font: clamp(48px, 9vw, 100px) 'Archivo Black'; text-shadow: 0 7px 0 #293b55; }
+.match-result span { color: #d9effa; font-size: 10px; letter-spacing: 2px; }
+.match-result button { margin-top: 15px; padding: 13px 20px; color: #fff; background: #ff5a4f; border: 0; border-radius: 7px; cursor: pointer; font: 10px 'Archivo Black'; }
 .damage-flash { position: fixed; z-index: 6; inset: 0; pointer-events: none; box-shadow: inset 0 0 90px 35px rgba(255,41,31,0); transition: box-shadow .12s; }
 .damage-flash.active { box-shadow: inset 0 0 90px 35px rgba(255,41,31,.72); }
 .controls { display: none; position: fixed; z-index: 7; inset: auto 18px 20px; justify-content: space-between; pointer-events: none; }
 .controls button { pointer-events: auto; width: 62px; height: 62px; border: 1px solid rgba(255,255,255,.4); border-radius: 15px; color: #fff; background: rgba(10,25,40,.5); font-size: 24px; backdrop-filter: blur(8px); }
 .controls .drift-control { width: 76px; margin-left: 8px; color: #26324a; background: #ffd447; border-color: #fff0a8; font-size: 11px; font-weight: 900; }
 .controls .fire-control { width: 70px; color: #fff; background: #ff5a4f; border-color: #ffb1aa; font-size: 11px; font-weight: 900; }
+.controls .item-control { width: 64px; color: #fff; background: #793dd2; font-size: 10px; font-weight: 900; }
+.controls .jet-control { width: 58px; color: #26324a; background: #8bdfff; font-size: 10px; font-weight: 900; }
 .controls div { display: flex; gap: 8px; margin-left: auto; }
 
-@media (pointer: coarse) { .controls.active { display: flex; } .speed, .weapon-hud { bottom: 100px; } }
+@media (pointer: coarse) { .controls.active { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; } .controls button, .controls .drift-control, .controls .fire-control, .controls .item-control, .controls .jet-control { width: 100%; height: 50px; margin: 0; } .controls div { display: contents; } .speed, .weapon-hud { bottom: 100px; } .secondary-hud { bottom: 158px; } }
 @media (max-width: 700px) { .players { top: 80px; } .leaderboard { top: 190px; right: 18px; width: 165px; } .position, .lap { top: 82px; left: 18px; } .lap { left: 104px; } .health { left: 18px; top: 145px; width: 150px; } }

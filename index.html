@@ -22,12 +22,14 @@
 
       <section id="hud" class="hud hidden" aria-live="polite">
         <div class="position"><strong id="position">2</strong><small>DRIVERS</small></div>
-        <div class="lap"><small>MODE</small><b>BATTLE ARENA</b></div>
+        <div class="lap"><small>MODE</small><b id="mode-label">FIRST TO 5 KILLS</b></div>
         <div class="health"><small>ARMOR</small><b id="health-value">100</b><span>HP</span><div><i id="healthbar"></i></div></div>
         <div class="speed"><strong id="speed">0</strong><span>KM/H</span><div><i id="speedbar"></i></div></div>
         <div id="drift-status" class="drift-status">DRIFTING</div>
         <div id="rear-view" class="rear-view">REAR VIEW</div>
         <div class="weapon-hud"><i aria-hidden="true"></i><span><small>SIDEARM</small><b>MK-I PISTOL</b></span><strong>∞<small>AMMO</small></strong></div>
+        <div class="secondary-hud"><kbd>E</kbd><span><small>SECONDARY</small><b id="secondary-name">GRENADE</b></span></div>
+        <div id="powerup-status" class="powerup-status"></div>
         <div class="crosshair" aria-hidden="true">+</div>
         <div class="players" id="players"></div>
         <div class="leaderboard" id="leaderboard"></div>
@@ -53,7 +55,7 @@
             <p class="privacy-note"><i></i> PUBLIC TEST SERVERS · NO ACCOUNT NEEDED</p>
           </div>
         </div>
-        <p class="hint"><kbd>WASD</kbd> DRIVE <span>·</span> <kbd>SPACE</kbd> DRIFT <span>·</span> <kbd>F</kbd> FIRE <span>·</span> <kbd>R</kbd> REAR VIEW</p>
+        <p class="hint"><kbd>WASD</kbd> DRIVE <span>·</span> <kbd>SPACE</kbd> DRIFT <span>·</span> <kbd>F</kbd> FIRE <span>·</span> <kbd>E</kbd> ITEM <span>·</span> <kbd>SHIFT</kbd> JETPACK <span>·</span> <kbd>R</kbd> REAR VIEW</p>
       </section>
 
       <section id="lobby" class="arena-lobby hidden" aria-label="Room lobby">
@@ -87,6 +89,10 @@
               </div>
             </div>
           </section>
+          <section class="match-setup" aria-label="Match rules and secondary weapon">
+            <label><small>LEADER MATCH MODE</small><select id="match-mode"><option value="battle">BATTLE · FIRST TO 5 KILLS</option><option value="race">RACE · STRAIGHT SPRINT</option></select></label>
+            <label><small>SECONDARY SLOT</small><select id="secondary-choice"><option value="grenade">GRENADE</option><option value="landmine">LANDMINE</option><option value="spring">INVISIBLE SPRING</option></select></label>
+          </section>
           <div class="players-heading"><h3>DRIVERS</h3><span><b id="lobby-player-count">1</b> / 8</span></div>
           <div id="lobby-players" class="lobby-players"></div>
           <div class="lobby-footer"><p id="room-status">WAITING FOR THE OWNER TO START…</p><button id="start-room" class="race-button hidden"><span><small>EVERYONE READY?</small>START BATTLE</span><b>›</b></button></div>
@@ -95,11 +101,15 @@
 
       <div id="countdown" class="countdown" aria-live="assertive"></div>
       <div id="presence-toast" class="presence-toast" role="status" aria-live="polite"></div>
+      <div id="powerup-toast" class="powerup-toast" role="status" aria-live="polite"></div>
       <div id="damage-flash" class="damage-flash" aria-hidden="true"></div>
+      <section id="match-result" class="match-result" aria-live="assertive"><small>MATCH COMPLETE</small><strong>YOU WIN!</strong><span></span><button id="play-again">BACK TO LOBBY</button></section>
       <div class="controls" aria-label="Touch controls">
         <button data-key="left" aria-label="Turn left">←</button>
         <button class="drift-control" data-key="drift" aria-label="Drift">DRIFT</button>
         <button class="fire-control" data-key="fire" aria-label="Fire pistol">FIRE</button>
+        <button class="item-control" data-key="secondary" aria-label="Use secondary weapon">ITEM</button>
+        <button class="jet-control" data-key="jetpack" aria-label="Use jetpack">JET</button>
         <div><button data-key="forward" aria-label="Accelerate">↑</button><button data-key="back" aria-label="Brake">↓</button></div>
         <button data-key="right" aria-label="Turn right">→</button>
       </div>

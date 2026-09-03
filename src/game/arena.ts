@@ -102,6 +102,31 @@ export function createArena(scene: THREE.Scene) {
   scene.add(sun)
 }
 
+export function createRaceTrack(scene: THREE.Scene) {
+  const track = new THREE.Group()
+  const road = floorMesh(new THREE.PlaneGeometry(25, 212), '#354052', .11)
+  track.add(road)
+  for (const x of [-8, 0, 8]) track.add(floorMesh(new THREE.PlaneGeometry(.18, 196), x ? '#f5e8b8' : '#7a8595', .13).translateX(x))
+  for (const x of [-13, 13]) {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(.55, 1.2, 210), toon(x < 0 ? '#ff5a4f' : '#49c8ef'))
+    rail.position.set(x, .65, 0)
+    rail.castShadow = true
+    track.add(rail)
+  }
+  for (let x = -10; x < 10; x += 4) for (const z of [96, 100]) {
+    const tile = floorMesh(new THREE.PlaneGeometry(4, 4), ((x / 4 + z / 4) & 1) ? '#ffffff' : '#202638', .15)
+    tile.position.x = x + 2
+    tile.position.z = z - 2
+    track.add(tile)
+  }
+  const start = floorMesh(new THREE.PlaneGeometry(22, 1.2), '#ffd447', .15)
+  start.position.z = -96
+  track.add(start)
+  track.visible = false
+  scene.add(track)
+  return track
+}
+
 export function containInArena(state: KartState) {
   const distance = Math.hypot(state.x, state.z)
   if (distance <= PLAYABLE_RADIUS) return

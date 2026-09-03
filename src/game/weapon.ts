@@ -48,6 +48,11 @@ export class WeaponSystem {
 
   get bulletCount() { return this.bullets.length }
 
+  shootRemote(state: KartState) {
+    this.cooldown = 0
+    return this.shoot(state)
+  }
+
   setSkin(primary: THREE.ColorRepresentation, accent: THREE.ColorRepresentation) {
     this.steelMaterial.color.set(primary)
     this.accentMaterial.color.set(accent)
@@ -61,14 +66,14 @@ export class WeaponSystem {
     this.bullets = []
   }
 
-  update(state: KartState, obstacles: Obstacle[], targets: WeaponTarget[], firing: boolean, dt: number, onHit: (id: string, damage: number) => void, onFire: () => void = () => {}) {
+  update(state: KartState, obstacles: Obstacle[], targets: WeaponTarget[], firing: boolean, dt: number, onHit: (id: string, damage: number) => void, onFire: () => void = () => {}, fireInterval = .24) {
     this.cooldown = Math.max(0, this.cooldown - dt)
     this.recoil = Math.max(0, this.recoil - dt * 7)
     this.slide.position.z = .35 - this.recoil * .28
     this.flash.visible = this.recoil > .62
     this.flash.scale.setScalar(.7 + this.recoil * .7)
     this.holder.rotation.y = Math.sin(performance.now() * .004) * .012
-    if (firing && this.shoot(state)) onFire()
+    if (firing && this.shoot(state, fireInterval)) onFire()
 
     for (const bullet of this.bullets) {
       for (let i = bullet.trail.length - 1; i > 0; i--) bullet.trail[i].position.copy(bullet.trail[i - 1].position)
@@ -101,7 +106,7 @@ export class WeaponSystem {
     }
   }
 
-  shoot(state: KartState) {
+  shoot(state: KartState, fireInterval = .24) {
     if (this.cooldown > 0) return false
     this.holder.updateWorldMatrix(true, true)
     const position = this.muzzle.getWorldPosition(new THREE.Vector3())
@@ -122,7 +127,7 @@ export class WeaponSystem {
     const velocity = direction.clone().multiplyScalar(38 + Math.max(0, state.speed) * .35)
     this.bullets.push({ model: bullet, trail, velocity, dead: false })
     this.effects.muzzleSmoke(position, direction)
-    this.cooldown = .24
+    this.cooldown = fireInterval
     this.recoil = 1
     return true
   }
