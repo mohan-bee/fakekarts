@@ -1,10 +1,11 @@
+import { normalizeTrim, type KartTrim } from './cosmetics.js'
 import mqtt, { type MqttClient } from 'mqtt'
-import { isMatchMode, type MatchMode } from './match'
+import { isMatchMode, type MatchMode } from './match.js'
 import type { KartState } from './physics'
 import { generateRoomCode } from './roomCode'
 import { isSecondaryKind, type SecondaryKind } from './secondary'
 
-export type Peer = KartState & { id: string; name: string; score: number; cosmetic: number; secondary: SecondaryKind; seen: number }
+export type Peer = KartState & { id: string; name: string; score: number; cosmetic: number; secondary: SecondaryKind; trim?: KartTrim; seen: number }
 
 type RoomMessage =
   | { type: 'state'; player: Omit<Peer, 'seen'> }
@@ -114,7 +115,7 @@ export class Multiplayer {
   private async connect(room: string) {
     this.disconnect()
     this.room = room
-    this.topic = `fakekarts/v4/${room}`
+    this.topic = `fakekarts/v5/${room}`
     const left = JSON.stringify({ type: 'left', id: this.id } satisfies RoomMessage)
     try {
       const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
@@ -144,7 +145,7 @@ export class Multiplayer {
   }
 
   send(state: KartState, score: number) {
-    this.localPlayer = { ...state, id: this.id, name: this.name(), score, cosmetic: this.localPlayer.cosmetic, secondary: this.localPlayer.secondary }
+    this.localPlayer = { ...state, id: this.id, name: this.name(), score, cosmetic: this.localPlayer.cosmetic, secondary: this.localPlayer.secondary, trim: this.localPlayer.trim }
     this.publishLocalState()
     const stale = performance.now() - 3000
     for (const [id, player] of this.peers) if (player.seen < stale) this.removePeer(id)
@@ -152,6 +153,11 @@ export class Multiplayer {
 
   setCosmetic(cosmetic: number) {
     this.localPlayer.cosmetic = cosmetic
+    this.publishLocalState()
+  }
+
+  setTrim(trim: KartTrim) {
+    this.localPlayer.trim = normalizeTrim(trim)
     this.publishLocalState()
   }
 

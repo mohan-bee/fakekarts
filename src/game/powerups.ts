@@ -36,7 +36,7 @@ export class PowerupSystem {
   active(kind: PowerupKind) { return this.timers[kind] > 0 }
   remaining(kind: PowerupKind) { return Math.ceil(this.timers[kind]) }
 
-  update(state: KartState, dt: number) {
+  update(state: KartState, dt: number, enabled = true) {
     this.time += dt
     for (const kind of Object.keys(this.timers) as PowerupKind[]) this.timers[kind] = Math.max(0, this.timers[kind] - dt)
     this.shield.visible = this.active('shield')
@@ -45,10 +45,10 @@ export class PowerupSystem {
     for (const pickup of this.pickups) {
       // ponytail: pickups are per-player; synchronize ownership when contested spawns become part of ranked matches.
       pickup.respawn = Math.max(0, pickup.respawn - dt)
-      pickup.object.visible = pickup.respawn === 0
+      pickup.object.visible = enabled && pickup.respawn === 0
       pickup.object.rotation.y += dt * 1.7
       pickup.object.position.y = 1.7 + Math.sin(this.time * 2.5 + pickup.object.position.x) * .25
-      if (pickup.respawn || Math.hypot(state.x - pickup.object.position.x, state.z - pickup.object.position.z) > 3.5) continue
+      if (!enabled || Math.abs((state.y ?? 0) - pickup.object.position.y) > 3 || pickup.respawn || Math.hypot(state.x - pickup.object.position.x, state.z - pickup.object.position.z) > 3.5) continue
       this.timers[pickup.kind] = DURATION[pickup.kind]
       pickup.respawn = 14
       pickup.object.visible = false

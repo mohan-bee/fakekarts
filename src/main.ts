@@ -2,9 +2,10 @@ import './styles/base.css'
 import './styles/menu.css'
 import './styles/hud.css'
 import './styles/settings.css'
+import { GaragePreview } from './game/garage'
 import { Game } from './game/Game'
-import { COSMETICS, cosmeticAt } from './game/cosmetics'
-import type { MatchMode } from './game/match'
+import { COSMETICS, cosmeticAt, normalizeTrim, type KartTrim } from './game/cosmetics'
+import { MODE_LABELS, type MatchMode } from './game/match'
 import { isRoomCode, normalizeRoomCode } from './game/roomCode'
 import { isSecondaryKind } from './game/secondary'
 import { setupSettings } from './game/settings'
@@ -25,6 +26,8 @@ const secondaryChoice = byId<HTMLSelectElement>('secondary-choice')
 room.value = normalizeRoomCode(new URLSearchParams(location.search).get('room') || '')
 const settings = setupSettings()
 const game = new Game(byId<HTMLCanvasElement>('world'), () => name.value.trim() || 'Rookie', settings)
+const garagePreview = new GaragePreview(byId<HTMLCanvasElement>('garage-preview'))
+let previewTrim = normalizeTrim()
 const garageOptions = byId('garage-options')
 
 const selectCosmetic = (id: number) => {
@@ -43,6 +46,7 @@ const selectCosmetic = (id: number) => {
     button.setAttribute('aria-checked', String(selected))
   }
   game.setCosmetic(cosmetic.id)
+  garagePreview.update(cosmetic, previewTrim)
 }
 
 for (const cosmetic of COSMETICS) {
@@ -67,8 +71,42 @@ secondaryChoice.addEventListener('change', () => {
   localStorage.setItem('fakekarts-secondary', secondaryChoice.value)
   game.setSecondary(secondaryChoice.value)
 })
+const descriptions: Record<MatchMode, string> = {
+  battle: 'First to 10 eliminations. Solo practice includes an armed opponent.',
+  race: 'Three laps. Cross all 12 gates in order. Weapons and pickups disabled. Solo runs track your best lap.',
+  'combat-race': 'Three laps with weapons. Elimination returns you to your last checkpoint with two seconds of spawn protection.',
+}
 matchMode.addEventListener('change', () => {
-  startButton.querySelector('span')!.innerHTML = `<small>EVERYONE READY?</small>START ${matchMode.value === 'race' ? 'RACE' : 'BATTLE'}`
+  startButton.querySelector('span')!.textContent = `START ${MODE_LABELS[matchMode.value as MatchMode]}`
+  byId('mode-description').textContent = descriptions[matchMode.value as MatchMode]
+})
+let trim = normalizeTrim()
+try { trim = normalizeTrim(JSON.parse(localStorage.getItem('fakekarts-trim') || '{}')) } catch { /* Default trim. */ }
+for (const key of ['wheels', 'aero', 'finish'] as const) {
+  const select = byId<HTMLSelectElement>(`trim-${key}`)
+  select.value = trim[key]
+  select.addEventListener('change', () => {
+    trim = normalizeTrim({ ...trim, [key]: select.value } as KartTrim)
+    localStorage.setItem('fakekarts-trim', JSON.stringify(trim))
+    game.setTrim(trim)
+    previewTrim = trim
+    garagePreview.update(cosmeticAt(Number(localStorage.getItem('fakekarts-cosmetic'))), trim)
+  })
+}
+game.setTrim(trim)
+previewTrim = trim
+garagePreview.update(cosmeticAt(Number(localStorage.getItem('fakekarts-cosmetic'))), trim)
+let practice = false
+byId('practice').addEventListener('click', () => {
+  practice = true
+  byId('menu').classList.add('hidden')
+  lobby.classList.remove('hidden')
+  byId('lobby-room-code').textContent = 'SOLO'
+  byId('room-name').textContent = 'PRACTICE'
+  byId('room-status').textContent = 'CHOOSE YOUR MODE AND LOADOUT'
+  lobby.querySelector('.lobby-header > span')!.textContent = 'OFFLINE'
+  startButton.classList.remove('hidden')
+  renderRoster([])
 })
 
 let countdownRunning = false
@@ -152,7 +190,8 @@ createButton.addEventListener('click', () => enterLobby(() => game.createRoom(),
 startButton.addEventListener('click', () => {
   startButton.disabled = true
   roomStatus.textContent = 'STARTING FOR EVERYONE…'
-  game.startRoomRace(matchMode.value as MatchMode)
+  if (practice) void runCountdown(Date.now(), matchMode.value as MatchMode)
+  else game.startRoomRace(matchMode.value as MatchMode)
 })
 
 joinButton.addEventListener('click', () => {

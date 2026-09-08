@@ -11,6 +11,8 @@
 
 - `src/game/Game.ts` only coordinates the render loop and game systems.
 - `src/game/arena.ts` owns arena geometry, lighting, and arena boundaries.
+- `src/game/bot.ts` owns practice opponent input decisions.
+- `src/game/garage.ts` owns the live kart preview.
 - `src/game/camera.ts` owns chase camera behavior.
 - `src/game/combat.ts` owns health, damage, respawning, and kart-to-kart collision rules.
 - `src/game/cosmetics.ts` owns the selectable kart, exhaust, and weapon palettes.

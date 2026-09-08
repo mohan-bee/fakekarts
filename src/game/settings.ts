@@ -2,10 +2,11 @@ export type GameSettings = {
   cameraDistance: number
   cameraHeight: number
   steeringSensitivity: number
+  airSteeringSensitivity: number
   driftStrength: number
 }
 
-const defaults: GameSettings = { cameraDistance: 12, cameraHeight: 6.5, steeringSensitivity: 1, driftStrength: 1.15 }
+const defaults: GameSettings = { cameraDistance: 12, cameraHeight: 6.5, steeringSensitivity: 1, driftStrength: 1.15, airSteeringSensitivity: 1 }
 
 export function setupSettings() {
   let saved: Partial<GameSettings> = {}

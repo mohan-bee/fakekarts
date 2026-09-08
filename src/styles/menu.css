@@ -55,17 +55,6 @@ kbd { padding: 4px 6px; color: #dff5ff; background: rgba(8,27,45,.75); border: 1
 .garage-heading strong { color: #ffd447; font: 11px 'Archivo Black'; letter-spacing: 1px; }
 .garage-body { display: grid; grid-template-columns: 1.15fr .85fr; gap: 14px; align-items: center; }
 .kart-preview { min-width: 0; overflow: hidden; background: radial-gradient(ellipse at 52% 73%, rgba(105,207,255,.18), transparent 60%), linear-gradient(145deg, rgba(16,48,72,.9), rgba(5,21,36,.65)); border: 1px solid rgba(139,216,255,.15); border-radius: 10px; }
-.kart-preview svg { display: block; width: 100%; filter: drop-shadow(0 8px 8px rgba(0,0,0,.28)); }
-.preview-shadow { fill: rgba(0,0,0,.35); }
-.preview-kart-model { transform-origin: 150px 95px; animation: garage-idle 2.6s ease-in-out infinite; }
-.preview-paint { fill: var(--paint); }
-.preview-accent, .preview-rim { fill: var(--accent); }
-.preview-gun { fill: var(--gun); }
-.preview-glass { fill: #82d8f4; stroke: #dff8ff; stroke-width: 3px; }
-.preview-dark, .preview-wheel { fill: #202638; }
-.preview-rim { stroke: #eefaff; stroke-width: 3px; }
-.preview-exhaust path { fill: none; stroke: var(--exhaust); stroke-width: 8px; stroke-linecap: round; filter: drop-shadow(0 0 5px var(--exhaust)); animation: garage-exhaust .6s ease-in-out infinite alternate; }
-.preview-exhaust path:last-child { animation-delay: -.3s; }
 .garage-options { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; }
 .garage-options button { position: relative; height: 38px; padding: 0; overflow: hidden; background: var(--paint); border: 2px solid rgba(255,255,255,.18); border-radius: 7px; cursor: pointer; transform: skew(-5deg); transition: transform .14s, border-color .14s, box-shadow .14s; }
 .garage-options button i { position: absolute; inset: 0 0 auto auto; width: 45%; height: 100%; background: var(--accent); clip-path: polygon(55% 0, 100% 0, 100% 100%, 0 100%); }
@@ -74,8 +63,6 @@ kbd { padding: 4px 6px; color: #dff5ff; background: rgba(8,27,45,.75); border: 1
 .garage-options button.selected { border-color: #fff; box-shadow: 0 0 0 2px #ffd447, 0 5px 15px rgba(0,0,0,.3); transform: skew(-5deg) translateY(-2px); }
 .garage-controls > p { margin: 11px 0 0; color: #6f91a6; font-size: 7px; letter-spacing: .7px; white-space: nowrap; }
 .garage-controls > p i { display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
-@keyframes garage-idle { 0%, 100% { transform: translateY(1px) rotate(-.3deg); } 50% { transform: translateY(-3px) rotate(.3deg); } }
-@keyframes garage-exhaust { from { opacity: .35; transform: translateX(7px); } to { opacity: 1; transform: translateX(-4px); } }
 .match-setup { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 0 20px; }
 .match-setup label { color: #7fa8bf; font-size: 8px; letter-spacing: 1.2px; }
 .match-setup small { display: block; margin-bottom: 6px; }
@@ -108,6 +95,23 @@ kbd { padding: 4px 6px; color: #dff5ff; background: rgba(8,27,45,.75); border: 1
   .lobby-footer .race-button { width: 100%; }
   .garage-body { grid-template-columns: 1fr; }
   .kart-preview { max-height: 135px; }
-  .kart-preview svg { width: min(300px, 100%); margin: -7px auto; }
   .match-setup { grid-template-columns: 1fr; }
 }
+
+/* Motorsport presentation: restrained panels, functional typography, live garage model. */
+.menu { background: linear-gradient(110deg, #0b1018f7 35%, #161e28d9); }
+h1 { transform: none; text-shadow: none; font-style: italic; letter-spacing: -5px; line-height: .85; }
+h1 em { color: #e3b34e; }
+.match-card, .lobby-card { border-radius: 4px; background: #131c26f5; border-color: #364351; }
+.lobby-card { width: min(760px, 100%); }
+.race-button { border-radius: 3px; background: #ad3c31; box-shadow: none; }
+.create-button, .garage, .room-code-panel, .lobby-players span { border-radius: 3px; }
+.lobby-room-code { text-shadow: none; }
+.lobby-players i { transform: none; border-radius: 3px; }
+.garage-options button, .garage-options button:hover, .garage-options button.selected { transform: none; border-radius: 2px; }
+.garage-options button.selected { box-shadow: 0 0 0 1px #e3b34e; }
+#garage-preview { display: block; width: 100%; height: 190px; }
+.trim-setup { grid-template-columns: repeat(3, 1fr); }
+.mode-description { color: #aebbc7; font-size: 10px; line-height: 1.7; margin: -6px 0 18px; }
+.practice-button { width: 100%; min-height: 40px; margin-top: 12px; letter-spacing: 1px; }
+@media (max-width: 760px) { .kart-preview { max-height: none; } .trim-setup { grid-template-columns: 1fr; } }

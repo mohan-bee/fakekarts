@@ -11,7 +11,7 @@ export function takeDamage(state: Pick<KartState, 'health'>, damage: number) {
 }
 
 export function respawn(state: KartState) {
-  Object.assign(state, { x: 0, y: 0, z: 12, heading: 0, speed: 0, verticalSpeed: 0, drift: 0, health: MAX_HEALTH })
+  Object.assign(state, { x: 0, y: 0, z: 12, heading: 0, speed: 0, verticalSpeed: 0, airborne: false, drift: 0, health: MAX_HEALTH })
 }
 
 export function resolveKartCollision(state: KartState, target: CollisionTarget) {
