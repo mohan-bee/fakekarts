@@ -4,17 +4,17 @@ import type { KartState } from './physics'
 
 export type Obstacle = { object: THREE.Object3D; x: number; z: number; radius: number; height: number; breakable: boolean; broken: boolean }
 
-const toon = (color: THREE.ColorRepresentation) => new THREE.MeshToonMaterial({ color })
+const material = (color: THREE.ColorRepresentation) => new THREE.MeshStandardMaterial({ color })
 const ramps = [{ x: -24, z: 0, direction: 1 }, { x: 24, z: 0, direction: -1 }]
 const KART_RADIUS = 1.8
 
 function addCube(scene: THREE.Scene, x: number, z: number, color: THREE.ColorRepresentation): Obstacle {
   const cube = new THREE.Group()
-  const block = new THREE.Mesh(new RoundedBoxGeometry(5, 5, 5, 4, .35), toon(color))
+  const block = new THREE.Mesh(new RoundedBoxGeometry(5, 5, 5, 4, .35), material(color))
   block.castShadow = block.receiveShadow = true
   cube.add(block)
   for (const y of [-1.75, 1.75]) {
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(5.15, .3, 5.15), toon('#fff2bd'))
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(5.15, .3, 5.15), material('#c4c7c9'))
     stripe.position.y = y
     cube.add(stripe)
   }
@@ -26,8 +26,8 @@ function addCube(scene: THREE.Scene, x: number, z: number, color: THREE.ColorRep
 
 function addCrate(scene: THREE.Scene, x: number, z: number): Obstacle {
   const crate = new THREE.Group()
-  const wood = toon('#a96232')
-  const slat = toon('#d48a4c')
+  const wood = material('#a96232')
+  const slat = material('#d48a4c')
   const box = new THREE.Mesh(new RoundedBoxGeometry(3.6, 3.6, 3.6, 2, .12), wood)
   box.castShadow = box.receiveShadow = true
   crate.add(box)
@@ -51,8 +51,8 @@ function addCrate(scene: THREE.Scene, x: number, z: number): Obstacle {
 
 function addTireStack(scene: THREE.Scene, x: number, z: number): Obstacle {
   const stack = new THREE.Group()
-  const rubber = toon('#252b38')
-  const rim = toon('#8fd8eb')
+  const rubber = material('#252b38')
+  const rim = material('#969fa6')
   for (let y = 0; y < 4; y++) {
     const tire = new THREE.Mesh(new THREE.TorusGeometry(1.65, .48, 8, 18), rubber)
     tire.position.y = .48 + y * .72
@@ -70,12 +70,12 @@ function addTireStack(scene: THREE.Scene, x: number, z: number): Obstacle {
 
 function addBarrier(scene: THREE.Scene, x: number, z: number, rotation = 0): Obstacle {
   const barrier = new THREE.Group()
-  const concrete = new THREE.Mesh(new RoundedBoxGeometry(7, 2.5, 1.7, 3, .2), toon('#d8dbe3'))
+  const concrete = new THREE.Mesh(new RoundedBoxGeometry(7, 2.5, 1.7, 3, .2), material('#d8dbe3'))
   concrete.position.y = 1.25
   concrete.castShadow = concrete.receiveShadow = true
   barrier.add(concrete)
   for (const offset of [-2.15, 0, 2.15]) {
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(1.15, .34, 1.78), toon('#ff6259'))
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(1.15, .34, 1.78), material('#ff6259'))
     stripe.position.set(offset, 1.35, 0)
     stripe.rotation.z = -.48
     barrier.add(stripe)
@@ -87,8 +87,8 @@ function addBarrier(scene: THREE.Scene, x: number, z: number, rotation = 0): Obs
 }
 
 function addSkatePark(scene: THREE.Scene) {
-  const concrete = toon('#65c8d5')
-  const metal = toon('#e7f4f5')
+  const concrete = material('#576774')
+  const metal = material('#e7f4f5')
   const angle = Math.atan(4 / 14)
   for (const ramp of ramps) {
     const park = new THREE.Group()
@@ -103,7 +103,7 @@ function addSkatePark(scene: THREE.Scene) {
       park.add(edge)
     }
     for (const z of [-3, 0, 3]) {
-      const grip = new THREE.Mesh(new THREE.BoxGeometry(5.2, .08, .55), toon('#ffe052'))
+      const grip = new THREE.Mesh(new THREE.BoxGeometry(5.2, .08, .55), material('#ffe052'))
       grip.position.set(0, .3, z)
       park.add(grip)
     }
@@ -123,15 +123,15 @@ function addSkatePark(scene: THREE.Scene) {
 
 export function createObstacles(scene: THREE.Scene) {
   const obstacles = [
-    addCube(scene, -10, -31, '#ff6d62'),
-    addCube(scene, 16, 27, '#ffd447'),
-    addCube(scene, 38, -14, '#6f7de8'),
+    addCube(scene, -10, -31, '#793f38'),
+    addCube(scene, 16, 27, '#8c815c'),
+    addCube(scene, 38, -14, '#4e5c6b'),
     addCrate(scene, -4, 34),
     addCrate(scene, 5, 36),
     addCrate(scene, -38, 20),
     addCrate(scene, -33, 25),
-    addCube(scene, 67, 43, '#44cfa1'),
-    addCube(scene, -72, -35, '#ff8d3b'),
+    addCube(scene, 67, 43, '#49675c'),
+    addCube(scene, -72, -35, '#88633f'),
     addCrate(scene, 73, -22),
     addCrate(scene, 67, -27),
     addCrate(scene, -66, 54),

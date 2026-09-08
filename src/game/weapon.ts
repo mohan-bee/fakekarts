@@ -25,11 +25,14 @@ export const distanceToSegmentSquared = (px: number, py: number, pz: number, sta
   return x * x + y * y + z * z
 }
 
+export const MAGAZINE_SIZE = 12
+export const RELOAD_SECONDS = 1.4
+
 export class WeaponSystem {
-  private steelMaterial = new THREE.MeshToonMaterial({ color: '#6f7f94' })
-  private accentMaterial = new THREE.MeshToonMaterial({ color: '#ff5a4f' })
-  private bulletMaterial = new THREE.MeshToonMaterial({ color: '#c88a35' })
-  private bulletTipMaterial = new THREE.MeshToonMaterial({ color: '#e0a46a' })
+  private steelMaterial = new THREE.MeshStandardMaterial({ color: '#6f7f94' })
+  private accentMaterial = new THREE.MeshStandardMaterial({ color: '#ff5a4f' })
+  private bulletMaterial = new THREE.MeshStandardMaterial({ color: '#c88a35' })
+  private bulletTipMaterial = new THREE.MeshStandardMaterial({ color: '#e0a46a' })
   private holder = new THREE.Group()
   private slide = new THREE.Mesh()
   private muzzle = new THREE.Object3D()
@@ -38,6 +41,8 @@ export class WeaponSystem {
   private trailGeometry = new THREE.BoxGeometry(.08, .08, .7)
   private trailMaterials = [.2, .12, .06].map(opacity => new THREE.MeshBasicMaterial({ color: '#fff4c7', transparent: true, opacity, depthWrite: false }))
   private bulletTemplate = this.createBulletModel()
+  ammo = MAGAZINE_SIZE
+  reloadRemaining = 0
   private cooldown = 0
   private recoil = 0
 
@@ -46,9 +51,13 @@ export class WeaponSystem {
     kart.add(this.holder)
   }
 
+  setEnabled(enabled: boolean) { this.holder.visible = enabled }
+
   get bulletCount() { return this.bullets.length }
 
   shootRemote(state: KartState) {
+    this.ammo = MAGAZINE_SIZE
+    this.reloadRemaining = 0
     this.cooldown = 0
     return this.shoot(state)
   }
@@ -61,12 +70,21 @@ export class WeaponSystem {
     for (const material of this.trailMaterials) material.color.set(accent)
   }
 
+  reload() {
+    if (!this.reloadRemaining && this.ammo < MAGAZINE_SIZE) this.reloadRemaining = RELOAD_SECONDS
+  }
+
   clear() {
     for (const bullet of this.bullets) this.scene.remove(bullet.model, ...bullet.trail)
     this.bullets = []
   }
 
-  update(state: KartState, obstacles: Obstacle[], targets: WeaponTarget[], firing: boolean, dt: number, onHit: (id: string, damage: number) => void, onFire: () => void = () => {}, fireInterval = .24) {
+  update(state: KartState, obstacles: Obstacle[], targets: WeaponTarget[], firing: boolean, dt: number, onHit: (id: string, damage: number) => void, onFire: () => void = () => {}, fireInterval = .24, reloading = false) {
+    if (this.reloadRemaining > 0) {
+      this.reloadRemaining = Math.max(0, this.reloadRemaining - dt)
+      if (!this.reloadRemaining) this.ammo = MAGAZINE_SIZE
+    }
+    if (reloading) this.reload()
     this.cooldown = Math.max(0, this.cooldown - dt)
     this.recoil = Math.max(0, this.recoil - dt * 7)
     this.slide.position.z = .35 - this.recoil * .28
@@ -107,7 +125,7 @@ export class WeaponSystem {
   }
 
   shoot(state: KartState, fireInterval = .24) {
-    if (this.cooldown > 0) return false
+    if (this.cooldown > 0 || this.reloadRemaining > 0 || this.ammo === 0) return false
     this.holder.updateWorldMatrix(true, true)
     const position = this.muzzle.getWorldPosition(new THREE.Vector3())
     const direction = new THREE.Vector3(0, 0, 1).applyQuaternion(this.muzzle.getWorldQuaternion(new THREE.Quaternion())).normalize()
@@ -127,6 +145,8 @@ export class WeaponSystem {
     const velocity = direction.clone().multiplyScalar(38 + Math.max(0, state.speed) * .35)
     this.bullets.push({ model: bullet, trail, velocity, dead: false })
     this.effects.muzzleSmoke(position, direction)
+    this.ammo--
+    if (!this.ammo) this.reload()
     this.cooldown = fireInterval
     this.recoil = 1
     return true
@@ -139,13 +159,13 @@ export class WeaponSystem {
     body.rotation.x = tip.rotation.x = Math.PI / 2
     tip.position.z = .6
     bullet.add(body, tip)
-    bullet.scale.setScalar(1.5)
+    bullet.scale.setScalar(.55)
     bullet.userData.projectile = true
     return bullet
   }
 
   private buildModel() {
-    const dark = new THREE.MeshToonMaterial({ color: '#222b3d' })
+    const dark = new THREE.MeshStandardMaterial({ color: '#222b3d' })
     const base = new THREE.Mesh(new THREE.CylinderGeometry(.48, .62, .28, 10), dark)
     const post = new THREE.Mesh(new THREE.CylinderGeometry(.15, .2, .72, 8), this.steelMaterial)
     post.position.y = .45
@@ -168,7 +188,8 @@ export class WeaponSystem {
     this.flash.visible = false
     pistol.add(this.slide, frame, grip, barrel, sight, this.muzzle, this.flash)
     for (const object of [base, post, this.slide, frame, grip, barrel, sight]) object.castShadow = true
-    this.holder.position.set(0, 1.05, 2.15)
+    this.holder.scale.setScalar(.65)
+    this.holder.position.set(.65, .8, 1.3)
     this.holder.add(base, post, pistol)
   }
 }

@@ -1,6 +1,6 @@
-export type KartState = { x: number; z: number; heading: number; speed: number; y?: number; verticalSpeed?: number; drift?: number; health?: number }
-export type Controls = { forward: boolean; back: boolean; left: boolean; right: boolean; drift: boolean; fire: boolean; secondary?: boolean; jetpack?: boolean }
-export type Handling = { steeringSensitivity: number; driftStrength: number }
+export type KartState = { x: number; z: number; heading: number; speed: number; y?: number; verticalSpeed?: number; drift?: number; health?: number; airborne?: boolean }
+export type Controls = { forward: boolean; back: boolean; left: boolean; right: boolean; drift: boolean; fire: boolean; reload?: boolean; secondary?: boolean; jetpack?: boolean }
+export type Handling = { steeringSensitivity: number; driftStrength: number; airSteeringSensitivity?: number }
 export const KPH_PER_UNIT = 5.1
 export const MAX_SPEED = 150 / KPH_PER_UNIT
 export const MAX_REVERSE_SPEED = 70 / KPH_PER_UNIT
@@ -13,12 +13,14 @@ export const stepKart = (state: KartState, input: Controls, dt: number, handling
   speed = Math.max(-MAX_REVERSE_SPEED, Math.min(MAX_SPEED, speed))
 
   const steering = Number(input.left) - Number(input.right)
-  const drifting = input.drift && speed > 4 && steering !== 0
+  const airborne = state.airborne ?? ((state.y ?? 0) > .1 || (state.verticalSpeed ?? 0) > 0)
+  if (airborne && input.drift) speed *= Math.exp(-3 * dt)
+  const drifting = !airborne && input.drift && speed > 4 && steering !== 0
   const driftTarget = drifting ? -steering * (.35 + speed / MAX_SPEED * .25) * handling.driftStrength : 0
   const drift = (state.drift ?? 0) + (driftTarget - (state.drift ?? 0)) * Math.min(1, dt * (drifting ? 8 : 5))
-  const turn = steering * Math.min(1, Math.abs(speed) / 7) * Math.sign(speed || 1)
-  const heading = state.heading + turn * (drifting ? 3.1 : 2.15) * handling.steeringSensitivity * dt
-  const travelHeading = heading + drift
+  const turn = airborne ? steering : steering * Math.min(1, Math.abs(speed) / 7) * Math.sign(speed || 1)
+  const heading = state.heading + turn * (airborne ? 1.9 : drifting ? 3.1 : 2.15) * (airborne ? handling.airSteeringSensitivity ?? 1 : handling.steeringSensitivity) * dt
+  const travelHeading = heading + (airborne ? 0 : drift)
   return {
     ...state,
     x: state.x + Math.sin(travelHeading) * speed * dt,
@@ -38,6 +40,7 @@ export const stepGravity = (state: KartState, groundHeight: number, previousGrou
     y += verticalSpeed * dt
   }
   if (y <= groundHeight) { y = groundHeight; verticalSpeed = 0 }
+  state.airborne = y > groundHeight + .01 || verticalSpeed > 0
   state.y = y
   state.verticalSpeed = verticalSpeed
 }

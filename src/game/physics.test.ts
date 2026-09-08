@@ -43,3 +43,28 @@ test('kart launches from a ramp and gravity lands it', () => {
   assert.equal(kart.y, 0)
   assert.equal(kart.verticalSpeed, 0)
 })
+
+test('air steering works at zero speed, is consistent in reverse, and air brake slows travel', () => {
+  const input = { forward: false, back: false, left: true, right: false, drift: false, fire: false }
+  for (const speed of [0, -10, 20]) {
+    const initial = { x: 0, z: 0, y: 10, heading: 0, speed, drift: .4, airborne: true }
+    const turned = stepKart(initial, input, .1)
+    assert.ok(turned.heading > 0)
+    assert.equal(turned.heading, .19)
+    const braked = stepKart(initial, { ...input, drift: true }, .1)
+    assert.ok(Math.abs(braked.speed) <= Math.abs(turned.speed))
+    const sensitive = stepKart(initial, input, .1, { steeringSensitivity: 1, driftStrength: 1, airSteeringSensitivity: 1.7 })
+    assert.ok(sensitive.heading > turned.heading)
+  }
+})
+
+test('ramp contact keeps ground steering and landing clears airborne state', () => {
+  const kart = { x: 0, z: 0, y: 4, verticalSpeed: 0, heading: 0, speed: 0, airborne: false }
+  const input = { forward: false, back: false, left: true, right: false, drift: false, fire: false }
+  stepGravity(kart, 4, 4, 1 / 60)
+  assert.equal(stepKart(kart, input, .1).heading, 0)
+  stepGravity(kart, 0, 4, .1)
+  assert.equal(kart.airborne, true)
+  for (let i = 0; i < 120; i++) stepGravity(kart, 0, 0, 1 / 60)
+  assert.equal(kart.airborne, false)
+})

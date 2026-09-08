@@ -1,14 +1,15 @@
 import * as THREE from 'three'
 import { containInArena, createArena, createRaceTrack } from './arena'
+import { botControls } from './bot'
 import { ChaseCamera } from './camera'
 import { MAX_HEALTH, respawn, resolveKartCollision, takeDamage } from './combat'
-import { cosmeticAt } from './cosmetics'
+import { cosmeticAt, normalizeTrim, type KartTrim } from './cosmetics'
 import { Effects } from './effects'
 import { updateHud } from './hud'
 import { bindControls } from './input'
 import { shortestTurn, smoothingFactor } from './interpolation'
-import { createKart, styleKart } from './kart'
-import { containOnRaceTrack, hasWon, raceProgress, RACE_START_Z, type MatchMode } from './match'
+import { animateKart, createKart, styleKart } from './kart'
+import { advanceRace, raceSpawn, containOnRaceTrack, createRaceState, formatTime, hasWon, MODE_LABELS, raceProgress, weaponsEnabled, type MatchMode, type MatchStats } from './match'
 import { Multiplayer, type Peer } from './multiplayer'
 import { createObstacles, rampHeightAt, rampPitchAt, resolveObstacleCollisions, type Obstacle } from './obstacles'
 import { stepGravity, stepKart, type Controls, type KartState } from './physics'
@@ -38,49 +39,60 @@ export class Game {
   private controls: Controls = { forward: false, back: false, left: false, right: false, drift: false, fire: false, secondary: false, jetpack: false }
   private clock = new THREE.Clock()
   private running = false
-  private aiAngle = 0
+  private botState: KartState = { x: 20, z: 28, heading: 0, speed: 0 }
+  private botWeapon: WeaponSystem
+  private botKills = 0
+  private race = createRaceState()
+  private raceStartedAt = 0
+  private stats: MatchStats = { shots: 0, hits: 0, kills: 0, deaths: 0 }
+  private trim = normalizeTrim()
+  private respawnProtection = 0
   private lastSend = 0
   private groundHeight = 0
   private botHealth = MAX_HEALTH
   private cosmeticId = 0
   private secondaryKind: SecondaryKind = 'grenade'
   private mode: MatchMode = 'battle'
-  private kills = 0
   private finished = false
 
   constructor(canvas: HTMLCanvasElement, name: () => string, private settings: GameSettings) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
     this.renderer.shadowMap.enabled = true
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping
+    this.renderer.toneMappingExposure = .95
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
     createArena(this.scene)
     this.raceTrack = createRaceTrack(this.scene)
     this.obstacles = createObstacles(this.scene)
     this.scene.add(this.kart, this.rival)
-    new WeaponSystem(this.scene, this.rival, this.effects)
+    this.botWeapon = new WeaponSystem(this.scene, this.rival, this.effects)
     this.chaseCamera.snap(this.state)
     this.multiplayer = new Multiplayer(name)
     this.setCosmetic(0)
     this.multiplayer.onDamage((damage, attackerId) => this.damagePlayer(damage, attackerId))
     this.multiplayer.onFire(id => {
       const peer = this.multiplayer.peers.get(id)
-      if (peer) this.remoteWeapons.get(id)?.shootRemote(peer)
+      if (peer && this.running && weaponsEnabled(this.mode)) this.remoteWeapons.get(id)?.shootRemote(peer)
     })
     this.multiplayer.onSecondary((id, kind) => {
       const peer = this.multiplayer.peers.get(id)
-      if (peer) {
+      if (peer && this.running && weaponsEnabled(this.mode)) {
         const system = this.remoteSecondaries.get(id) ?? new SecondarySystem(this.scene, this.effects)
         this.remoteSecondaries.set(id, system)
         system.deploy(peer, kind)
       }
     })
     this.multiplayer.onImpulse((x, z, up) => {
+      if (!this.running || !weaponsEnabled(this.mode)) return
+      this.state.airborne = true
       this.state.x += x
       this.state.z += z
       this.state.y = Math.max(.1, this.state.y ?? 0)
       this.state.verticalSpeed = up
     })
-    this.multiplayer.onWinner((playerName, mode) => this.showWinner(playerName, mode))
+    this.multiplayer.onWinner((playerName, mode) => { if (this.running && mode === this.mode) this.showWinner(playerName, mode) })
     this.multiplayer.onKill(() => this.creditKill())
     bindControls(this.controls, () => document.querySelector('#rear-view')!.classList.toggle('active', this.chaseCamera.toggleReverse()))
     addEventListener('resize', () => this.resize())
@@ -105,13 +117,22 @@ export class Game {
   start(mode: MatchMode) {
     this.mode = mode
     this.finished = false
-    this.kills = 0
-    this.raceTrack.visible = mode === 'race'
-    this.rival.visible = mode === 'battle'
+    this.race = createRaceState()
+    this.raceStartedAt = performance.now()
+    this.stats = { shots: 0, hits: 0, kills: 0, deaths: 0 }
+    this.botKills = 0
+    this.botHealth = MAX_HEALTH
+    this.groundHeight = 0
+    this.respawnProtection = 2
+    this.raceTrack.visible = mode !== 'battle'
+    this.rival.visible = mode === 'battle' && !this.multiplayer.room
     for (const obstacle of this.obstacles) obstacle.object.visible = mode === 'battle' && !obstacle.broken
-    if (mode === 'race') Object.assign(this.state, { x: this.startLane(), y: 0, z: RACE_START_Z, heading: 0, speed: 0, verticalSpeed: 0, health: MAX_HEALTH })
+    if (mode !== 'battle') this.respawnOnTrack()
     else respawn(this.state)
-    document.querySelector('#mode-label')!.textContent = mode === 'race' ? 'STRAIGHT SPRINT' : 'FIRST TO 5 KILLS'
+    document.querySelector('#mode-label')!.textContent = MODE_LABELS[mode]
+    document.querySelector('#hud')!.classList.toggle('race-only', !weaponsEnabled(mode))
+    document.querySelector('.controls')!.classList.toggle('race-only', !weaponsEnabled(mode))
+    this.weapon.setEnabled(weaponsEnabled(mode))
     this.chaseCamera.snap(this.state)
     this.running = true
   }
@@ -119,9 +140,15 @@ export class Game {
   setCosmetic(id: number) {
     const cosmetic = cosmeticAt(id)
     this.cosmeticId = cosmetic.id
-    styleKart(this.kart, cosmetic.paint, cosmetic.accent)
+    styleKart(this.kart, cosmetic.paint, cosmetic.accent, this.trim)
     this.weapon.setSkin(cosmetic.gun, cosmetic.accent)
     this.multiplayer?.setCosmetic(cosmetic.id)
+  }
+
+  setTrim(trim: KartTrim) {
+    this.trim = normalizeTrim(trim)
+    this.setCosmetic(this.cosmeticId)
+    this.multiplayer.setTrim(this.trim)
   }
 
   setSecondary(kind: SecondaryKind) {
@@ -143,25 +170,33 @@ export class Game {
   }
 
   private update(dt: number) {
+    const previous = { ...this.state }
+    this.respawnProtection = Math.max(0, this.respawnProtection - dt)
     this.state = stepKart(this.state, this.controls, dt, this.settings)
     this.powerups.applyJetpack(this.state, Boolean(this.controls.jetpack), dt)
     containInArena(this.state)
-    if (this.mode === 'race') containOnRaceTrack(this.state)
+    if (this.mode !== 'battle') containOnRaceTrack(this.state)
     const activeObstacles = this.mode === 'battle' ? this.obstacles : []
     for (const obstacle of resolveObstacleCollisions(this.state, activeObstacles)) this.effects.crateBurst(obstacle.x, obstacle.z)
     const groundHeight = this.mode === 'battle' ? rampHeightAt(this.state.x, this.state.z) : 0
     stepGravity(this.state, groundHeight, this.groundHeight, dt)
     this.groundHeight = groundHeight
-    if (this.mode === 'battle') {
-      this.aiAngle += dt * .45
-      this.rival.position.set(Math.sin(this.aiAngle) * 28, .12, Math.cos(this.aiAngle) * 28)
-      this.rival.rotation.y = this.aiAngle + Math.PI / 2
+    if (this.rival.visible) {
+      const input = botControls(this.botState, this.state)
+      this.botState = stepKart(this.botState, input, dt)
+      containInArena(this.botState)
+      resolveObstacleCollisions(this.botState, activeObstacles)
+      this.rival.position.set(this.botState.x, .12, this.botState.z)
+      this.rival.rotation.y = this.botState.heading
+      animateKart(this.rival, this.botState.speed, Number(input.left) - Number(input.right), dt)
+      this.botWeapon.update(this.botState, activeObstacles, [{ id: 'local', object: this.kart }], input.fire, dt, (_id, damage) => this.damagePlayer(damage, 'bot'), () => {}, .65)
     }
     this.collideWithOpponents()
     this.syncPeers(dt)
 
     this.kart.position.set(this.state.x, .12 + (this.state.y ?? 0), this.state.z)
     this.kart.rotation.y = this.state.heading
+    animateKart(this.kart, this.state.speed, Number(this.controls.left) - Number(this.controls.right), dt)
     this.kart.rotation.z = THREE.MathUtils.lerp(this.kart.rotation.z, -(this.state.drift ?? 0) * .12, 1 - Math.exp(-9 * dt))
     const airbornePitch = -(this.state.verticalSpeed ?? 0) * .035
     this.kart.rotation.x = THREE.MathUtils.lerp(this.kart.rotation.x, groundHeight ? rampPitchAt(this.state.x, this.state.z, this.state.heading) : airbornePitch, 1 - Math.exp(-10 * dt))
@@ -170,9 +205,9 @@ export class Game {
     this.effects.exhaust(this.state, dt, cosmeticAt(this.cosmeticId).exhaust)
     this.effects.jetpack(this.state, dt, Boolean(this.controls.jetpack && this.powerups.active('jetpack')))
     this.effects.drift(this.state, dt)
-    const targets: WeaponTarget[] = [...(this.mode === 'battle' ? [{ id: 'bot', object: this.rival }] : []), ...[...this.remotes].map(([id, object]) => ({ id, object }))]
-    this.weapon.update(this.state, activeObstacles, targets, this.controls.fire, dt, (id, damage) => this.damageOpponent(id, damage), () => this.multiplayer.fire(), this.powerups.active('rapid') ? .09 : .24)
-    if (this.controls.secondary && this.secondary.deploy(this.state, this.secondaryKind)) this.multiplayer.useSecondary(this.secondaryKind)
+    const targets: WeaponTarget[] = [...(this.rival.visible ? [{ id: 'bot', object: this.rival }] : []), ...[...this.remotes].map(([id, object]) => ({ id, object }))]
+    this.weapon.update(this.state, activeObstacles, targets, weaponsEnabled(this.mode) && this.controls.fire, dt, (id, damage) => { this.stats.hits++; this.damageOpponent(id, damage) }, () => { this.stats.shots++; this.multiplayer.fire() }, this.powerups.active('rapid') ? .09 : .24, weaponsEnabled(this.mode) && Boolean(this.controls.reload))
+    if (weaponsEnabled(this.mode) && this.controls.secondary && this.secondary.deploy(this.state, this.secondaryKind)) this.multiplayer.useSecondary(this.secondaryKind)
     this.secondary.update(dt, targets, (id, damage) => this.damageOpponent(id, damage), (id, x, z, up) => this.pushOpponent(id, x, z, up))
     for (const [id, weapon] of this.remoteWeapons) {
       const peer = this.multiplayer.peers.get(id)
@@ -181,27 +216,29 @@ export class Game {
     for (const [id, secondary] of this.remoteSecondaries) if (this.multiplayer.peers.has(id)) {
       secondary.update(dt, [{ id: 'local', object: this.kart }], () => {}, () => {})
     }
-    const collected = this.powerups.update(this.state, dt)
+    const collected = this.powerups.update(this.state, dt, this.mode === 'battle')
     if (collected) this.showPowerup(collected)
     this.effects.update(dt)
 
-    if (!this.finished && hasWon(this.mode, this.kills, this.state.z, this.state.x)) {
+    if (this.mode !== 'battle') advanceRace(this.race, previous, this.state, Math.max(0, (performance.now() - this.raceStartedAt) / 1000 - this.race.elapsed))
+    if (!this.finished && hasWon(this.mode, this.stats.kills, this.race.checkpoints)) {
       this.multiplayer.announceWinner(this.mode)
       this.showWinner('YOU', this.mode)
     }
 
     this.lastSend += dt
-    const score = this.mode === 'race' ? raceProgress(this.state.z) : this.kills
-    if (this.lastSend > .08) { this.multiplayer.send(this.state, Math.round(score)); this.lastSend = 0 }
-    updateHud(this.state.speed, this.state.drift ?? 0, this.state.health ?? MAX_HEALTH, this.botHealth, this.multiplayer.peers.values(), this.multiplayer.id, score, this.mode, this.secondaryKind, this.powerups)
+    const score = this.mode !== 'battle' ? raceProgress(this.race, this.state) : this.stats.kills
+    if (this.lastSend > .08) { this.multiplayer.send(this.state, score); this.lastSend = 0 }
+    updateHud(this.state.speed, this.state.drift ?? 0, this.state.health ?? MAX_HEALTH, this.botHealth, this.multiplayer.peers.values(), this.multiplayer.id, score, this.mode, this.secondaryKind, this.powerups, this.race, this.stats, this.rival.visible ? this.botKills : undefined, Boolean(this.state.airborne), this.weapon.ammo, this.weapon.reloadRemaining)
   }
 
   private collideWithOpponents() {
-    if (this.mode === 'battle') resolveKartCollision(this.state, { x: this.rival.position.x, y: 0, z: this.rival.position.z })
+    if (this.rival.visible) resolveKartCollision(this.state, { x: this.rival.position.x, y: 0, z: this.rival.position.z })
     for (const peer of this.multiplayer.peers.values()) resolveKartCollision(this.state, peer)
   }
 
   private damageOpponent(id: string, damage: number) {
+    if (!this.running || !weaponsEnabled(this.mode)) return
     const crosshair = document.querySelector('#hud .crosshair')!
     crosshair.classList.remove('hit')
     requestAnimationFrame(() => crosshair.classList.add('hit'))
@@ -211,6 +248,7 @@ export class Game {
   }
 
   private damagePlayer(damage: number, attackerId?: string) {
+    if (!this.running || !weaponsEnabled(this.mode) || this.respawnProtection > 0) return
     if (this.powerups.active('shield')) {
       this.effects.bulletImpact(this.kart.position.clone().add(new THREE.Vector3(0, 1, 0)))
       return
@@ -222,9 +260,14 @@ export class Game {
     requestAnimationFrame(() => flash.classList.add('active'))
     window.setTimeout(() => flash.classList.remove('active'), 130)
     if (destroyed) {
-      if (attackerId) this.multiplayer.confirmElimination(attackerId)
+      this.stats.deaths++
+      this.respawnProtection = 2
+      if (attackerId === 'bot') {
+        this.botKills++
+        if (hasWon('battle', this.botKills, 0)) this.showWinner('BOT-01', 'battle')
+      } else if (attackerId) this.multiplayer.confirmElimination(attackerId)
       this.effects.eliminationBurst(this.kart.position.clone().add(new THREE.Vector3(0, 1, 0)))
-      if (this.mode === 'race') Object.assign(this.state, { x: this.startLane(), y: 0, z: RACE_START_Z, heading: 0, speed: 0, verticalSpeed: 0, health: MAX_HEALTH })
+      if (this.mode !== 'battle') this.respawnOnTrack()
       else respawn(this.state)
       this.groundHeight = 0
       this.chaseCamera.snap(this.state)
@@ -239,7 +282,7 @@ export class Game {
     if (destroyed) {
       this.effects.eliminationBurst(this.rival.position.clone().add(new THREE.Vector3(0, 1, 0)))
       this.botHealth = MAX_HEALTH
-      this.aiAngle += Math.PI
+      this.botState = { x: -this.state.x, z: -this.state.z - 12, heading: 0, speed: 0 }
       this.creditKill()
     }
   }
@@ -251,7 +294,7 @@ export class Game {
       if (!kart) {
         const cosmetic = cosmeticAt(peer.cosmetic)
         kart = createKart(cosmetic.paint)
-        styleKart(kart, cosmetic.paint, cosmetic.accent)
+        styleKart(kart, cosmetic.paint, cosmetic.accent, peer.trim)
         kart.position.set(peer.x, .12 + (peer.y ?? 0), peer.z)
         kart.rotation.y = peer.heading
         this.remotes.set(id, kart)
@@ -268,7 +311,9 @@ export class Game {
         kart.rotation.y += turn * smoothing
       }
       const cosmetic = cosmeticAt(peer.cosmetic)
-      styleKart(kart, cosmetic.paint, cosmetic.accent)
+      styleKart(kart, cosmetic.paint, cosmetic.accent, peer.trim)
+      animateKart(kart, peer.speed, 0, dt)
+      this.remoteWeapons.get(id)?.setEnabled(weaponsEnabled(this.mode))
       this.remoteWeapons.get(id)?.setSkin(cosmetic.gun, cosmetic.accent)
       this.effects.exhaust(peer, dt, cosmetic.exhaust, id)
     }
@@ -284,14 +329,15 @@ export class Game {
   }
 
   private pushOpponent(id: string, x: number, z: number, up: number) {
-    if (id === 'bot') this.aiAngle += 1.2
+    if (id === 'bot') { this.botState.x += x; this.botState.z += z }
     else this.multiplayer.pushOpponent(id, x, z, up)
   }
 
-  private creditKill() { this.kills++ }
+  private creditKill() { if (this.running && weaponsEnabled(this.mode)) { this.stats.kills++ } }
 
-  private startLane() {
-    return (this.multiplayer.id.charCodeAt(0) % 5 - 2) * 4
+  private respawnOnTrack() {
+    const drivers = [this.multiplayer.id, ...this.multiplayer.peers.keys()].sort()
+    Object.assign(this.state, { ...raceSpawn(this.race.checkpoints, drivers.indexOf(this.multiplayer.id)), y: 0, speed: 0, verticalSpeed: 0, airborne: false, drift: 0, health: MAX_HEALTH })
   }
 
   private showPowerup(kind: string) {
@@ -307,7 +353,8 @@ export class Game {
     this.finished = true
     this.running = false
     document.querySelector('#match-result strong')!.textContent = name === 'YOU' ? 'YOU WIN!' : `${name.toUpperCase()} WINS!`
-    document.querySelector('#match-result span')!.textContent = mode === 'race' ? 'FIRST ACROSS THE FINISH LINE' : '5 ELIMINATIONS REACHED'
+    document.querySelector('#match-result span')!.textContent = mode !== 'battle' ? `YOUR TIME ${formatTime(this.race.elapsed)} · BEST ${formatTime(this.race.bestLap)}` : '10 ELIMINATIONS REACHED'
+    document.querySelector('#result-stats')!.textContent = `${this.stats.kills} KILLS / ${this.stats.deaths} DEATHS · ${this.stats.shots} SHOTS · ${this.stats.hits} HITS`
     document.querySelector('#match-result')!.classList.add('show')
   }
 

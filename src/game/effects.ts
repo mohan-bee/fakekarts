@@ -8,7 +8,7 @@ export class Effects {
   private exhaustTimers = new Map<string, number>()
   private driftTimer = 0
   private jetpackTimer = 0
-  private smokeGeometry = new THREE.SphereGeometry(.42, 7, 5)
+  private smokeGeometry = new THREE.SphereGeometry(.28, 12, 8)
   private debrisGeometry = new THREE.BoxGeometry(.35, .18, .7)
   private dropletGeometry = new THREE.SphereGeometry(.2, 7, 5)
   private shockwaveGeometry = new THREE.SphereGeometry(.65, 12, 8)
@@ -24,7 +24,9 @@ export class Effects {
       new THREE.Vector3(state.x - Math.sin(state.heading) * 2.4, (state.y ?? 0) + .75, state.z - Math.cos(state.heading) * 2.4),
       new THREE.Vector3((Math.random() - .5) * .7, 1.3 + Math.random(), (Math.random() - .5) * .7),
       true,
-      color,
+      new THREE.Color(color).lerp(new THREE.Color('#adb1b5'), .8),
+      .45,
+      .4,
     )
   }
 
@@ -139,7 +141,7 @@ export class Effects {
   }
 
   muzzleSmoke(position: THREE.Vector3, direction: THREE.Vector3) {
-    for (let i = 0; i < 3; i++) this.spawn(position.clone(), direction.clone().multiplyScalar(2 + Math.random() * 2).add(new THREE.Vector3(0, .7, 0)), true)
+    for (let i = 0; i < 3; i++) this.spawn(position.clone(), direction.clone().multiplyScalar(2 + Math.random() * 2).add(new THREE.Vector3(0, .7, 0)), true, '#b8bfc5', .22, .25)
   }
 
   update(dt: number) {

@@ -58,3 +58,23 @@ test('mounted pistol damages an opponent in its firing path', () => {
   assert.equal(damage, 25)
   assert.equal(weapon.bulletCount, 0)
 })
+
+test('a magazine counts actual shots and cannot fire during an automatic or manual reload', () => {
+  const scene = new THREE.Scene()
+  const kart = new THREE.Group()
+  scene.add(kart)
+  const weapon = new WeaponSystem(scene, kart, new Effects(scene))
+  const state = { x: 0, z: 0, heading: 0, speed: 0 }
+  let shots = 0
+  for (let i = 0; i < 12; i++) weapon.update(state, [], [], true, .25, () => {}, () => shots++)
+  assert.equal(shots, 12)
+  assert.equal(weapon.ammo, 0)
+  assert.equal(weapon.reloadRemaining, 1.4)
+  weapon.update(state, [], [], true, 1, () => {}, () => shots++)
+  assert.equal(shots, 12)
+  weapon.update(state, [], [], true, .5, () => {}, () => shots++)
+  assert.equal(shots, 13)
+  assert.equal(weapon.ammo, 11)
+  weapon.reload()
+  assert.equal(weapon.shoot(state), false)
+})
